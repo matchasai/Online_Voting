@@ -1,0 +1,14 @@
+express
+cors
+dotenv
+mongoose
+body-parser
+jsonwebtoken
+bcryptjs
+cookie-parser
+morgan
+helmet
+express-rate-limit
+express-validator
+dotenv
+nodemon
