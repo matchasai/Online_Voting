@@ -19,7 +19,7 @@ const About = () => {
           transition={{ duration: 0.5 }}
           className="text-center mb-20"
         >
-          <h2 className="text-4xl font-bold text-blue-400">About DeshKaVote</h2>
+          <h2 className="text-4xl font-bold text-blue-500">About DeshKaVote</h2>
           <p className="mt-8 text-lg text-gray-300">
             Empowering democracy through secure and transparent online voting.
           </p>
@@ -46,7 +46,7 @@ const About = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.2, duration: 0.5 }}
-              className="p-10 bg-gray-800 rounded-xl shadow-lg"
+              className="p-6 bg-gray-800 rounded-lg shadow-xl text-center transition transform hover:scale-105 hover:shadow-blue-500/50"
             >
               <h3 className="text-xl font-semibold text-blue-400">🔹 {item.title}</h3>
               <p className="text-gray-300 mt-4">{item.desc}</p>
@@ -61,7 +61,7 @@ const About = () => {
           transition={{ delay: 0.5, duration: 0.5 }}
           className="text-center mt-24"
         >
-          <h2 className="text-3xl font-bold text-blue-400">Our Goal</h2>
+          <h2 className="text-3xl font-bold text-blue-500">Our Goal</h2>
           <p className="text-gray-300 mt-8">
             Our mission is to modernize the voting system, ensuring every citizen has the ability to
             cast their vote safely and securely from anywhere. We strive to eliminate voter suppression,
@@ -81,7 +81,7 @@ const About = () => {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="text-center mt-24 pb-24"
         >
-          <h2 className="text-3xl font-bold text-blue-400">Meet Our Team</h2>
+          <h2 className="text-3xl font-bold text-blue-500">Meet Our Team</h2>
           <p className="text-gray-400 mt-4">
             Our dedicated team of professionals is committed to revolutionizing the voting process with technology.
           </p>
@@ -90,14 +90,16 @@ const About = () => {
               <motion.div
                 key={index}
                 whileHover={{ scale: 1.05 }}
-                className="p-10 bg-gray-800 rounded-xl shadow-lg flex flex-col items-center"
+                className="p-6 bg-gray-800 rounded-lg shadow-xl text-center transition transform hover:scale-105 hover:shadow-blue-500/50"
               >
-                <img
-                  src={member.img}
-                  alt={member.name}
-                  className="w-28 h-28 rounded-full border-4 border-blue-400"
-                />
-                <h3 className="mt-6 text-lg font-semibold">{member.name}</h3>
+                <div className="flex justify-center">
+                  <img
+                    src={member.img}
+                    alt={member.name}
+                    className="w-32 h-32 rounded-full border-4 border-blue-400 object-cover"
+                  />
+                </div>
+                <h3 className="mt-6 text-lg font-semibold text-blue-300">{member.name}</h3>
                 <p className="text-gray-400">{member.role}</p>
               </motion.div>
             ))}

@@ -1,26 +1,66 @@
 import axios from "axios";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const Signup = () => {
-  const navigate = useNavigate(); // For redirection
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     mobile: "",
-    aadhaar: "",
+    aadharNumber: "",
     age: "",
     gender: "",
+    district: "",
+    constituency: "",
     password: "",
     confirmPassword: "",
   });
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [districts, setDistricts] = useState([]);
+  const [constituencies, setConstituencies] = useState([]);
+
+  // Fetch Districts on Component Mount
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/districts");
+        setDistricts(response.data);
+      } catch (error) {
+        toast.error("Failed to load districts");
+      }
+    };
+    fetchDistricts();
+  }, []);
+
+  // Fetch Constituencies when District is Selected
+  const fetchConstituencies = async (districtId) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/constituencies?district=${districtId}`);
+      setConstituencies(response.data);
+    } catch (error) {
+      toast.error("Failed to load constituencies");
+    }
   };
 
+  // Handle Input Change
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // If district is changed, fetch respective constituencies
+    if (name === "district") {
+      const selectedDistrict = districts.find((dist) => dist.name === value);
+      if (selectedDistrict) {
+        fetchConstituencies(selectedDistrict._id); // Fetch constituencies for selected district
+        setFormData((prev) => ({ ...prev, constituency: "" })); // Reset constituency
+      }
+    }
+  };
+
+  // Handle Signup Submission
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -40,113 +80,70 @@ const Signup = () => {
       toast.error("Please select a gender");
       return;
     }
+    if (!formData.constituency || !formData.district) {
+      toast.error("Please select your constituency and district");
+      return;
+    }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/users/signup", formData);
-
+      const response = await axios.post("http://localhost:5000/api/user/signup", formData);
       if (response.status === 201 || response.status === 200) {
         toast.success("Signup Successful!");
-        setTimeout(() => navigate("/login"), 2000); // Redirect to login after a short delay
+        setTimeout(() => navigate("/login"), 2000);
       }
     } catch (error) {
-      if (error.response) {
-        toast.error(error.response.data.message || "Signup failed!");
-      } else {
-        toast.error("Network error. Please try again.");
-      }
+      toast.error(error.response?.data?.message || "Signup failed!");
     }
   };
 
   return (
-    <motion.div
-      className="flex items-center justify-center min-h-screen bg-gray-900 text-white px-6 pt-32"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <motion.div 
+      className="flex items-center justify-center min-h-screen bg-gray-900 text-white px-8 py-8 mt-16" 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
       transition={{ duration: 0.5 }}
     >
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md space-y-6">
         <h2 className="text-2xl font-bold text-center">Sign Up</h2>
-
         <form onSubmit={handleSignup} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="mobile"
-            placeholder="Mobile"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="aadhaar"
-            placeholder="Aadhaar / UPI Card Number"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="number"
-            name="age"
-            placeholder="Age"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
+          <input type="text" name="name" placeholder="Name" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="text" name="mobile" placeholder="Mobile" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="text" name="aadharNumber" placeholder="Aadhaar Number" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="number" name="age" placeholder="Age" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
 
-          {/* Gender Selection */}
-          <div className="relative">
-            <select
-              name="gender"
-              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-              onChange={handleChange}
-              required
-            >
-              <option value="" hidden>Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+          {/* Gender Dropdown */}
+          <select name="gender" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required>
+            <option value="" hidden>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={handleChange}
-            required
-          />
+          {/* District Dropdown */}
+          <select name="district" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required>
+            <option value="" hidden>Select District</option>
+            {districts.map((dist) => (
+              <option key={dist._id} value={dist.name}>{dist.name}</option>
+            ))}
+          </select>
 
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200"
-          >
-            Sign Up
-          </button>
+          {/* Constituency Dropdown */}
+          <select name="constituency" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required disabled={!formData.district}>
+            <option value="" hidden>Select Constituency</option>
+            {constituencies.map((consti) => (
+              <option key={consti._id} value={consti.name}>{consti.name}</option>
+            ))}
+          </select>
+
+          <input type="password" name="password" placeholder="Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="password" name="confirmPassword" placeholder="Confirm Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          
+          <button type="submit" className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200">Sign Up</button>
         </form>
 
         <p className="text-center text-gray-400">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-400 hover:underline">
-            Login
-          </Link>
+          Already have an account? <Link to="/login" className="text-blue-400 hover:underline">Login</Link>
         </p>
       </div>
     </motion.div>
