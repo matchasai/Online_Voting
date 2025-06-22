@@ -1,162 +1,216 @@
-import axios from "axios";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Bar, BarChart, Cell, Legend, Pie, PieChart, Tooltip, XAxis, YAxis } from "recharts";
+import { useEffect, useRef, useState } from "react";
+import { CSVLink } from "react-csv";
+import { AiOutlinePieChart } from "react-icons/ai";
+import { FaBuilding, FaDownload, FaMapMarkedAlt, FaRegChartBar, FaSyncAlt, FaUserCheck, FaUsers, FaUserTie, FaUserTimes } from "react-icons/fa";
+import { MdHowToVote } from "react-icons/md";
+import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import StatCard from "../components/StatCard";
+import { fetchDashboardData } from "../services/api";
+
+const ADMIN_NAME = "Sai Sujan Matcha";
 
 export default function AdminDashboard() {
-  const name = "Sai Sujan Matcha";
-  const [typingText, setTypingText] = useState("");
-  const [data, setData] = useState({ 
-    users: 0, 
-    parties: 0, 
-    voters: 0, 
-    voted: 0, 
+  const [stats, setStats] = useState({
+    users: 0,
+    parties: 0,
+    voters: 0,
+    voted: 0,
     notVoted: 0,
-    districts: [], 
-    constituencies: [], 
-    candidates: [] 
+    districts: 0,
+    constituencies: 0,
+    candidates: 0,
+    notaVotes: 0,
   });
+  const [votesTrend, setVotesTrend] = useState([]);
+  const [topConstituencies, setTopConstituencies] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [typingText, setTypingText] = useState("");
+  const refreshInterval = useRef(null);
 
-  // Typing Effect for Welcome Text
   useEffect(() => {
     let index = 0;
-    const fullText = `Welcome, ${name}`;
+    const fullText = `Welcome, ${ADMIN_NAME}`;
     setTypingText("");
-
     const typingInterval = setInterval(() => {
-      setTypingText(fullText.slice(0, index + 1)); 
+      setTypingText(fullText.slice(0, index + 1));
       index++;
       if (index === fullText.length) clearInterval(typingInterval);
     }, 150);
-
     return () => clearInterval(typingInterval);
   }, []);
 
-  // Fetching Admin Dashboard Data
+  const fetchData = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [totalUsersRes, votedUsersRes, nonVotedUsersRes, partiesRes, districtsRes, constituenciesRes, candidatesRes, notaRes, trendRes, topConsRes] = await fetchDashboardData();
+      
+      setStats({
+        users: totalUsersRes.data?.totalUsers ?? 0,
+        parties: Array.isArray(partiesRes.data?.data?.parties) ? partiesRes.data.data.parties.length : 0,
+        voters: totalUsersRes.data?.totalUsers ?? 0,
+        voted: votedUsersRes.data?.votedUsers ?? 0,
+        notVoted: nonVotedUsersRes.data?.nonVotedUsers ?? 0,
+        districts: districtsRes.data?.length ?? 0,
+        constituencies: constituenciesRes.data?.constituencies?.length ?? 0,
+        candidates: candidatesRes.data?.candidates?.length ?? 0,
+        notaVotes: notaRes.data?.totalNota ?? 0,
+      });
+
+      setVotesTrend(trendRes.data?.trend || []);
+      setTopConstituencies(topConsRes.data?.topTurnout || []);
+    } catch (err) {
+      setError("Could not load dashboard data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [totalUsersRes, votedUsersRes, nonVotedUsersRes, districtsRes, constituenciesRes, candidatesRes] = await Promise.all([
-          axios.get("http://localhost:5000/admin/stats/total"),
-          axios.get("http://localhost:5000/admin/stats/voted"),
-          axios.get("http://localhost:5000/admin/stats/non-voted"),
-          axios.get("http://localhost:5000/admin/districts"),
-          axios.get("http://localhost:5000/admin/constituencies"),
-          axios.get("http://localhost:5000/admin/candidates"),
-        ]);
-
-        setData({
-          users: totalUsersRes.data?.count || 0,
-          parties: votedUsersRes.data?.parties?.length || 0,
-          voters: totalUsersRes.data?.count || 0,
-          voted: votedUsersRes.data?.count || 0,
-          notVoted: nonVotedUsersRes.data?.count || 0,
-          districts: districtsRes.data?.districts || [],
-          constituencies: constituenciesRes.data?.constituencies || [],
-          candidates: candidatesRes.data?.candidates || [],
-        });
-      } catch (err) {
-        console.error("❌ Error fetching data", err);
-      }
-    };
-
     fetchData();
+    refreshInterval.current = setInterval(fetchData, 30000);
+    return () => clearInterval(refreshInterval.current);
   }, []);
 
-  // Chart Data for Display
+  const statCards = [
+    { label: "Total Voters", value: stats.voters, bg: "bg-blue-600", icon: <FaUsers />, tooltip: "Number of registered voters.", link: "/admin/users" },
+    { label: "Total Parties", value: stats.parties, bg: "bg-green-500", icon: <FaBuilding />, tooltip: "Number of registered parties.", link: "/admin/parties" },
+    { label: "Total Districts", value: stats.districts, bg: "bg-orange-400", icon: <FaMapMarkedAlt />, tooltip: "Number of districts.", link: "/admin/districts" },
+    { label: "Total Constituencies", value: stats.constituencies, bg: "bg-yellow-400", icon: <FaRegChartBar />, tooltip: "Number of constituencies.", link: "/admin/constituencies" },
+    { label: "Total Candidates", value: stats.candidates, bg: "bg-red-500", icon: <FaUserTie />, tooltip: "Number of candidates.", link: "/admin/candidates" },
+    { label: "Total Voted", value: stats.voted, bg: "bg-purple-600", icon: <FaUserCheck />, tooltip: "Number of users who have voted.", link: "/admin/users?voted=true" },
+    { label: "Total Not Voted", value: stats.notVoted, bg: "bg-pink-500", icon: <FaUserTimes />, tooltip: "Number of users who have not voted.", link: "/admin/users?voted=false" },
+    { label: "Total NOTA Votes", value: stats.notaVotes, bg: "bg-gray-700", icon: <MdHowToVote />, tooltip: "Total NOTA votes across all constituencies.", link: "/admin/votes" },
+  ];
+  
   const chartData = [
-    { name: "Users", value: data.users },
-    { name: "Parties", value: data.parties },
-    { name: "Voters", value: data.voters },
-    { name: "Voted", value: data.voted },
-    { name: "Not Voted", value: data.notVoted },
+    { name: "Voters", value: stats.voters },
+    { name: "Voted", value: stats.voted },
+    { name: "Not Voted", value: stats.notVoted },
+    { name: "NOTA", value: stats.notaVotes },
+  ];
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+
+  const csvStats = [
+    statCards.reduce((acc, item) => {
+      acc[item.label] = item.value;
+      return acc;
+    }, {})
   ];
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
-
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white">
-      {/* Header with Typing Effect */}
+    <div className="p-2 sm:p-4 md:p-6 bg-gray-900 min-h-screen text-white">
       <motion.h1 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         transition={{ duration: 1 }} 
-        className="text-4xl font-bold text-center text-gray-300 mb-6"
+        className="text-3xl sm:text-4xl font-bold text-center text-gray-300 mb-6"
+        tabIndex={0}
+        aria-label="Welcome Message"
       >
         {typingText}
       </motion.h1>
 
-      {/* Overview Stats Section */}
-      <div className="flex flex-wrap justify-center mb-8">
-        {[ 
-          { label: "Total Voters", value: data.users, bg: "bg-blue-600" },
-          { label: "Total Parties", value: data.parties, bg: "bg-green-500" },
-          { label: "Total Districts", value: data.districts.length, bg: "bg-orange-400" },
-          { label: "Total Constituencies", value: data.constituencies.length, bg: "bg-yellow-400" },
-          { label: "Total Candidates", value: data.candidates.length, bg: "bg-red-500" },
-          { label: "Total Voted", value: data.voted, bg: "bg-purple-600" },
-          { label: "Total Not Voted", value: data.notVoted, bg: "bg-pink-500" }, // Additional not voted box
-        ].map((item, index) => (
-          <div key={index} className={`min-w-[180px] flex-grow p-4 text-center ${item.bg} rounded-lg shadow-lg m-2`}>
-            <h3 className="text-lg font-bold mb-2 text-white">{item.label}</h3>
-            <p className="text-3xl font-bold text-white">{item.value}</p>
-          </div>
+      {error && <div className="bg-red-700 text-white p-3 rounded mb-4 text-center">{error}</div>}
+
+      <div className="flex flex-wrap justify-center mb-8 gap-2">
+        <button
+          className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 rounded text-white mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          onClick={fetchData}
+          title="Refresh stats"
+          aria-label="Refresh Stats"
+        >
+          <FaSyncAlt /> Refresh
+        </button>
+        <CSVLink
+          data={csvStats}
+          filename="dashboard-stats.csv"
+          className="flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-800 rounded text-white mb-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+          aria-label="Download All Data as CSV"
+        >
+          <FaDownload /> Download All Data
+        </CSVLink>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+        {statCards.map((card) => (
+          <StatCard key={card.label} card={card} />
         ))}
       </div>
 
-      {/* Charts Section: BarChart and PieChart */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div className="p-6 bg-gray-800 shadow-lg rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-gray-200">Election Data Overview</h2>
-          <BarChart width={400} height={250} data={chartData}>
-            <XAxis dataKey="name" stroke="white" />
-            <YAxis stroke="white" />
-            <Tooltip />
-            <Bar dataKey="value">
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
+        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-gray-200 flex items-center gap-2"><FaRegChartBar /> Election Data Overview</h2>
+          <div className="overflow-x-auto">
+            <BarChart width={400} height={250} data={chartData} margin={{ left: 10, right: 10 }}>
+              <XAxis dataKey="name" stroke="white" />
+              <YAxis stroke="white" />
+              <RechartsTooltip />
+              <Bar dataKey="value">
+                {chartData.map((entry) => (
+                  <Cell
+                    key={entry.name}
+                    fill={COLORS[chartData.findIndex(e => e.name === entry.name) % COLORS.length]}
+                  />
+                ))}
+              </Bar>
+              <Legend />
+            </BarChart>
+          </div>
         </div>
-        <div className="p-6 bg-gray-800 shadow-lg rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-gray-200">Voting Distribution</h2>
-          <PieChart width={400} height={250}>
-            <Pie data={chartData} cx="50%" cy="50%" outerRadius={100} fill="rgba(136, 132, 216, 0.8)" dataKey="value">
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-gray-200 flex items-center gap-2"><AiOutlinePieChart /> Voter Turnout</h2>
+          <div className="overflow-x-auto">
+            <PieChart width={400} height={250}>
+              <Pie
+                data={[{ name: "Voted", value: stats.voted }, { name: "Not Voted", value: stats.notVoted }]}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#8884d8"
+                label
+              >
+                <Cell fill="#00C49F" />
+                <Cell fill="#FF8042" />
+              </Pie>
+              <RechartsTooltip />
+              <Legend />
+            </PieChart>
+          </div>
         </div>
       </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Votes Trend Chart */}
+        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-gray-200">Votes Over Time</h2>
+          <LineChart width={500} height={300} data={votesTrend}>
+            <XAxis dataKey="date" stroke="white" />
+            <YAxis stroke="white" />
+            <RechartsTooltip />
+            <Legend />
+            <Line type="monotone" dataKey="count" stroke="#8884d8" />
+          </LineChart>
+        </div>
 
-      {/* Candidates List */}
-      <div className="bg-gray-800 p-6 shadow-lg rounded-lg">
-        <h2 className="text-lg font-semibold mb-4 text-gray-200">Candidates List</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse border border-gray-700">
-            <thead>
-              <tr className="bg-gray-700">
-                <th className="border p-2 text-gray-300">ID</th>
-                <th className="border p-2 text-gray-300">Name</th>
-                <th className="border p-2 text-gray-300">Party</th>
-                <th className="border p-2 text-gray-300">Constituency</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.candidates.map((candidate, index) => (
-                <tr key={index} className="even:bg-gray-700 hover:bg-gray-600">
-                  <td className="border p-2 text-center">{candidate.id}</td>
-                  <td className="border p-2 text-center">{candidate.name}</td>
-                  <td className="border p-2 text-center">{candidate.party}</td>
-                  <td className="border p-2 text-center">{candidate.constituency}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Top Constituencies by Turnout */}
+        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-gray-200">Top 5 Constituencies by Voter Turnout</h2>
+          <ul>
+            {topConstituencies.map((c, index) => (
+              <li key={c._id || index} className="flex justify-between items-center p-2 border-b border-gray-700">
+                <span>{index + 1}. {c.name}</span>
+                <span className="font-bold">
+                  {typeof c.turnoutPercentage === 'number' && !isNaN(c.turnoutPercentage)
+                    ? c.turnoutPercentage.toFixed(2) + '%'
+                    : 'N/A'}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

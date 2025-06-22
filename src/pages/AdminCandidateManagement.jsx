@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { CSVLink } from "react-csv";
 import { toast } from "react-hot-toast";
 
 export default function AdminCandidateManagement() {
@@ -13,25 +12,39 @@ export default function AdminCandidateManagement() {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
     partyId: "",
     districtId: "",
     constituencyId: "",
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const limit = 10;
 
   useEffect(() => {
-    fetchCandidates();
+    setLoading(true);
     fetchParties();
     fetchDistricts();
     fetchConstituencies();
   }, []);
 
   useEffect(() => {
+    fetchCandidates();
+  }, [currentPage, searchTerm, selectedDistrict]);
+
+  useEffect(() => {
     // Filter constituencies based on selected district
     if (formData.districtId) {
       const filtered = constituencies.filter(
-        (c) => c.districtId === formData.districtId
+        (c) =>
+          (typeof c.district === 'object'
+            ? String(c.district._id)
+            : String(c.district)) === String(formData.districtId)
       );
       setFilteredConstituencies(filtered);
     } else {
@@ -40,21 +53,31 @@ export default function AdminCandidateManagement() {
   }, [formData.districtId, constituencies]);
 
   const fetchCandidates = async () => {
+    setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/candidates");
-      setCandidates(res.data);
+      const res = await axios.get(`http://localhost:5000/api/candidates`, {
+        params: {
+          page: currentPage,
+          limit,
+          search: searchTerm,
+          district: selectedDistrict,
+        },
+      });
+      setCandidates(res.data.candidates);
+      setTotalPages(res.data.totalPages);
     } catch (err) {
       toast.error("Error fetching candidates");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchParties = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/parties");
-      if (res.data && res.data.data && Array.isArray(res.data.data)) {
-        setParties(res.data.data); // Access res.data.data
+      if (res.data && res.data.data && Array.isArray(res.data.data.parties)) {
+        setParties(res.data.data.parties);
       } else {
-        console.error("Unexpected data format for parties:", res.data);
         toast.error("Error fetching parties: Unexpected data format");
         setParties([]);
       }
@@ -75,8 +98,10 @@ export default function AdminCandidateManagement() {
 
   const fetchConstituencies = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/constituencies");
-      setConstituencies(res.data);
+      const res = await axios.get("http://localhost:5000/api/constituencies", {
+        params: { limit: 1000 }, // Fetch all constituencies for dropdowns
+      });
+      setConstituencies(res.data.constituencies);
     } catch (err) {
       toast.error("Error fetching constituencies");
     }
@@ -91,15 +116,33 @@ export default function AdminCandidateManagement() {
     )
       return toast.error("All fields are required");
 
+    if (!formData.image && !editData) {
+      return toast.error("Candidate image is required");
+    }
+
+    const data = new FormData();
+    data.append("name", formData.name);
+    data.append("partyId", formData.partyId);
+    data.append("constituencyId", formData.constituencyId);
+    if (formData.image) {
+      data.append("image", formData.image);
+    }
+
     try {
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      };
       if (editData) {
         await axios.put(
           `http://localhost:5000/api/candidates/${editData._id}`,
-          formData
+          data,
+          config
         );
         toast.success("Candidate updated successfully!");
       } else {
-        await axios.post("http://localhost:5000/api/candidates/add", formData);
+        await axios.post("http://localhost:5000/api/candidates/add", data, config);
         toast.success("Candidate added successfully!");
       }
       fetchCandidates();
@@ -110,7 +153,9 @@ export default function AdminCandidateManagement() {
         partyId: "",
         districtId: "",
         constituencyId: "",
+        image: null,
       });
+      setImagePreview(null);
     } catch (err) {
       toast.error("Error saving candidate");
     }
@@ -128,214 +173,155 @@ export default function AdminCandidateManagement() {
     }
   };
 
-  const getDistrictName = (districtId) => {
-    if (!districtId) return "N/A";
-    const district = districts.find((d) => d._id === districtId);
-    return district ? district.name : "N/A";
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page on new search
   };
 
-  const getConstituencyName = (constituencyId) => {
-    if (!constituencyId) return "N/A";
-    const constituency = constituencies.find((c) => c._id === constituencyId);
-    return constituency ? constituency.name : "N/A";
+  const handleDistrictChange = (e) => {
+    setSelectedDistrict(e.target.value);
+    setCurrentPage(1); // Reset to first page on new district filter
   };
 
-  const filteredCandidates = candidates
-    .map((candidate) => ({
-      ...candidate,
-      districtName: getDistrictName(candidate.districtId),
-      constituencyName: getConstituencyName(candidate.constituencyId),
-    }))
-    .filter((c) => {
-      return (
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (!selectedDistrict || c.districtId === selectedDistrict)
-      );
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData({ ...formData, image: file });
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const openAddDialog = () => {
+    setEditData(null);
+    setFormData({ name: "", partyId: "", districtId: "", constituencyId: "", image: null });
+    setImagePreview(null);
+    setOpenDialog(true);
+  };
+
+  const openEditDialog = (candidate) => {
+    setEditData(candidate);
+    const districtId = constituencies.find(c => c._id === candidate.constituency._id)?.district._id;
+    setFormData({
+      name: candidate.name,
+      partyId: candidate.party._id,
+      constituencyId: candidate.constituency._id,
+      districtId: districtId,
+      image: null, // Don't pre-fill file input
     });
+    if (candidate.image) {
+      setImagePreview(`data:image/png;base64,${candidate.image}`);
+    } else {
+      setImagePreview(null);
+    }
+    setOpenDialog(true);
+  };
 
   return (
-    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-2xl md:text-3xl font-bold text-center text-gray-300 mb-6">
-        Admin Candidate Management
-      </h1>
-
-      <div className="flex flex-wrap items-center justify-between mb-4">
+    <div className="p-2 sm:p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+      <h1 className="text-2xl md:text-3xl font-bold mb-8 text-center" tabIndex={0} aria-label="Admin Candidates Management">Admin Candidates Management</h1>
+      
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
         <input
           type="text"
           placeholder="Search Candidates..."
+          className="w-full md:w-1/2 p-2 rounded bg-gray-800 text-white border-none"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="p-2 bg-gray-800 text-white rounded-md w-full md:w-1/3 mb-2 md:mb-0"
+          onChange={handleSearchChange}
+          aria-label="Search Candidates"
         />
-        <select
-          onChange={(e) => setSelectedDistrict(e.target.value)}
-          className="p-2 bg-gray-800 text-white rounded-md w-full md:w-1/6 mb-2 md:mb-0"
-        >
-          <option value="">Select District</option>
-          {districts.map((d) => (
-            <option key={d._id} value={d._id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        <div className="flex flex-wrap justify-end">
-          <CSVLink
-            data={candidates.map(
-              ({ _id, name, party, districtId, constituencyId }) => ({
-                ID: _id,
-                Name: name,
-                Party: party?.name,
-                District: getDistrictName(districtId),
-                Constituency: getConstituencyName(constituencyId),
-              })
-            )}
-            filename="candidates.csv"
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md transition-colors mr-2 mb-2 md:mb-0"
-          >
-            Export CSV
-          </CSVLink>
-          <button
-            onClick={() => setOpenDialog(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors mb-2 md:mb-0"
+        <div className="flex flex-wrap gap-2 justify-end">
+          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-400" aria-label="Export Candidates as CSV">Export CSV</button>
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            onClick={openAddDialog}
+            aria-label="Add Candidate"
           >
             Add Candidate
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg">
-        <table className="w-full bg-gray-800">
-          <thead className="bg-gray-700">
+      {/* Table */}
+      <div className="overflow-x-auto rounded-md mb-6">
+        <table className="w-full bg-gray-800 text-sm md:text-base">
+          <thead className="bg-gray-700 text-gray-200">
             <tr>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Party</th>
-              <th className="p-3 text-left">District</th>
-              <th className="p-3 text-left">Constituency</th>
-              <th className="p-3 text-left">Actions</th>
+              <th className="text-left p-4">Name</th>
+              <th className="text-left p-4">Party</th>
+              <th className="text-left p-4">District</th>
+              <th className="text-left p-4">Constituency</th>
+              <th className="text-left p-4">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredCandidates.map((c) => (
-              <tr key={c._id} className="border-t border-gray-700">
-                <td className="p-3">{c.name}</td>
-                <td className="p-3">{c.party?.name}</td>
-                <td className="p-3">{c.districtName}</td>
-                <td className="p-3">{c.constituencyName}</td>
-                <td className="p-3 space-x-2">
-                  <button
-                    onClick={() => {
-                      setEditData(c);
-                      setFormData({
-                        name: c.name,
-                        partyId: c.party?._id,
-                        districtId: c.districtId,
-                        constituencyId: c.constituencyId,
-                      });
-                      setOpenDialog(true);
-                    }}
-                    className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded-md transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c._id)}
-                    className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              <tr><td colSpan="5" className="text-center p-4">Loading...</td></tr>
+            ) : candidates.length === 0 ? (
+              <tr><td colSpan="5" className="text-center p-4">No candidates found.</td></tr>
+            ) : (
+              candidates.map((candidate) => (
+                <tr key={candidate._id} className="border-b border-gray-700 hover:bg-gray-700" tabIndex={0} aria-label={`Candidate ${candidate.name}`}>
+                  <td className="p-4">{candidate.name}</td>
+                  <td className="p-4 flex items-center gap-2">
+                    {candidate.party.symbol ? (
+                      <img src={`data:image/png;base64,${candidate.party.symbol}`} alt={candidate.party.name} className="h-8 w-8 object-contain" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
+                        <span className="text-xs text-gray-400">No Symbol</span>
+                      </div>
+                    )}
+                    <span>{candidate.party.name}</span>
+                  </td>
+                  <td className="p-4">{candidate.constituency.district.name}</td>
+                  <td className="p-4">{candidate.constituency.name}</td>
+                  <td className="p-4">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => openEditDialog(candidate)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400" 
+                        aria-label={`Edit ${candidate.name}`}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
+                        onClick={() => handleDelete(candidate._id)}
+                        aria-label={`Delete ${candidate.name}`}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
-
-      {/* Modal Dialog */}
+      {/* Add/Edit Modals should be made responsive and accessible */}
       {openDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
-              {editData ? "Edit Candidate" : "Add Candidate"}
-            </h2>
-            <input
-              type="text"
-              placeholder="Enter Candidate Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className="w-full p-2 mb-4 bg-gray-700 rounded-md"
-            />
-            <select
-              value={formData.partyId}
-              onChange={(e) =>
-                setFormData({ ...formData, partyId: e.target.value })
-              }
-              className="w-full p-2 mb-4 bg-gray-700 rounded-md"
-            >
-              <option value="">Select Party</option>
-              {parties.map((p, index) => (
-                <option key={index} value={p._id?.$oid || p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={formData.districtId}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  districtId: e.target.value,
-                  constituencyId: "", // Reset constituency when district changes
-                });
-              }}
-              className="w-full p-2 mb-4 bg-gray-700 rounded-md"
-            >
-              <option value="">Select District</option>
-              {districts.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={formData.constituencyId}
-              onChange={(e) =>
-                setFormData({ ...formData, constituencyId: e.target.value })
-              }
-              className="w-full p-2 mb-4 bg-gray-700 rounded-md"
-            >
-              <option value="">Select Constituency</option>
-              {filteredConstituencies.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={handleSubmit}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-              >
-                {editData ? "Update" : "Add"} Candidate
-              </button>
-              <button
-                onClick={() => {
-                  setOpenDialog(false);
-                  setEditData(null);
-                  setFormData({
-                    name: "",
-                    partyId: "",
-                    districtId: "",
-                    constituencyId: "",
-                  });
-                }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 className="text-2xl font-bold mb-6">{editData ? "Edit Candidate" : "Add Candidate"}</h2>
+            <div className="grid grid-cols-1 gap-6">
+              <input type="text" placeholder="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full p-3 rounded bg-gray-700 text-white border-none" />
+              <input type="file" onChange={handleFileChange} className="w-full p-3 rounded bg-gray-700 text-white border-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
+              {imagePreview && <img src={imagePreview} alt="Preview" className="h-24 w-24 object-cover rounded-full mx-auto" />}
+              <select value={formData.partyId} onChange={(e) => setFormData({ ...formData, partyId: e.target.value })} className="w-full p-3 rounded bg-gray-700 text-white border-none">
+                <option value="">Select Party</option>
+                {parties.map((party) => <option key={party._id} value={party._id}>{party.name}</option>)}
+              </select>
+              <select value={formData.districtId} onChange={(e) => setFormData({ ...formData, districtId: e.target.value, constituencyId: '' })} className="w-full p-3 rounded bg-gray-700 text-white border-none">
+                <option value="">Select District</option>
+                {districts.map((district) => <option key={district._id} value={district._id}>{district.name}</option>)}
+              </select>
+              <select value={formData.constituencyId} onChange={(e) => setFormData({ ...formData, constituencyId: e.target.value })} className="w-full p-3 rounded bg-gray-700 text-white border-none" disabled={!formData.districtId}>
+                <option value="">Select Constituency</option>
+                {filteredConstituencies.map((constituency) => <option key={constituency._id} value={constituency._id}>{constituency.name}</option>)}
+              </select>
+            </div>
+            <div className="flex justify-end gap-4 mt-8">
+              <button onClick={() => setOpenDialog(false)} className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+              <button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">{editData ? "Update" : "Add"}</button>
             </div>
           </div>
         </div>

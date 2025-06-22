@@ -1,12 +1,41 @@
-# React + Vite
+# Online Voting System - Admin Panel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the admin dashboard for the Online Voting System project.
 
-Currently, two official plugins are available:
+## Features
+- Admin authentication
+- Manage users, parties, districts, constituencies, candidates
+- View and manage votes and results
+- Responsive and modern UI
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
+- React
+- Tailwind CSS
+- Axios
+- React Router
 
-## Expanding the ESLint configuration
+## Setup
+1. Navigate to the `Admin` directory:
+   ```bash
+   cd Admin
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. The admin panel will be available at `http://localhost:5173` by default.
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Available Scripts
+- `npm run dev` - Start the development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview the production build
+
+## Environment Variables
+- Configure API endpoints in `src/services/api.js` if needed.
+
+---
+For more details, see the main project documentation.

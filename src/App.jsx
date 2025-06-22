@@ -5,10 +5,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminDistrictManagement from "./pages/AdminDistrictManagement";
 import AdminLayout from "./pages/AdminLayout";
 import AdminLogin from "./pages/AdminLogin";
-import AdminVotes from "./pages/AdminVotes";
 import AdminPartyManagement from "./pages/AdminPartyManagement";
 import AdminResults from "./pages/AdminResults";
 import AdminUserManagement from "./pages/AdminUserManagement";
+import AdminVotes from "./pages/AdminVotes";
 
 function App() {
   return (
@@ -18,14 +18,15 @@ function App() {
       
       {/* Admin Layout with Nested Routes */}
       <Route path="/admin" element={<AdminLayout />}>
-        <Route path="users" element={<AdminUserManagement />} />
-        <Route path="parties" element={<AdminPartyManagement />} />
-        <Route path="districts" element={<AdminDistrictManagement/>} />
-        <Route path="constituencies" element={<AdminConstituencyManagement />} />
-        <Route path="candidates" element={<AdminCandidateManagement/>} />
-        <Route path="dashboard" element={<AdminDashboard/>} />
-        <Route path="votes" element={<AdminVotes/>} />
-        <Route path="Results" element={<AdminResults/>} />
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="user-management" element={<AdminUserManagement />} />
+        <Route path="party-management" element={<AdminPartyManagement />} />
+        <Route path="district-management" element={<AdminDistrictManagement />} />
+        <Route path="constituency-management" element={<AdminConstituencyManagement />} />
+        <Route path="candidate-management" element={<AdminCandidateManagement />} />
+        <Route path="votes" element={<AdminVotes />} />
+        <Route path="results" element={<AdminResults />} />
       </Route>
     </Routes>
   );

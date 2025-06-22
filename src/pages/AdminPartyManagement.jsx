@@ -1,331 +1,208 @@
-import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import { addParty, deleteParty, fetchParties, updateParty } from "../services/api";
+
+const ITEMS_PER_PAGE = 10;
 
 const PartyManagement = () => {
   const [parties, setParties] = useState([]);
-  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [newParty, setNewParty] = useState({ name: "", manifesto: "", symbol: null });
-  const [editParty, setEditParty] = useState(null);
-  const itemsPerPage = 10;
+  const [totalPages, setTotalPages] = useState(0);
+
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [partyToEdit, setPartyToEdit] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+
+  const loadParties = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetchParties(currentPage, ITEMS_PER_PAGE, searchTerm);
+      setParties(response.data.data.parties || []);
+      setTotalPages(response.data.data.totalPages || 0);
+    } catch (err) {
+      setError("Failed to fetch parties. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, searchTerm]);
 
   useEffect(() => {
-    fetchParties();
-  }, []);
+    loadParties();
+  }, [loadParties]);
 
-  const fetchParties = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/api/parties");
-      if (res.data.data && Array.isArray(res.data.data)) {
-        setParties(res.data.data);
-      } else {
-        setParties([]);
-      }
-    } catch (error) {
-      console.error("Error fetching parties:", error);
-      Swal.fire("Error", "Failed to fetch parties", "error");
-    }
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
   };
 
-  const handleAddParty = async () => {
-    try {
-      if (!newParty.name || !newParty.manifesto || !newParty.symbol) {
-        return Swal.fire("Error", "All fields are required", "error");
-      }
-
-      const formData = new FormData();
-      formData.append("name", newParty.name);
-      formData.append("manifesto", newParty.manifesto);
-      formData.append("symbol", newParty.symbol);
-
-      await axios.post("http://localhost:5000/api/parties", formData);
-      Swal.fire("Success", "Party added successfully!", "success");
-      fetchParties();
-      setNewParty({ name: "", manifesto: "", symbol: null });
-      document.getElementById("addModal").close();
-    } catch (error) {
-      console.error("Error adding party:", error);
-      const errorMessage = error.response?.data?.message || "Could not add party";
-      Swal.fire("Error", errorMessage, "error");
-    }
-  };
-
-  const handleEditParty = async () => {
-    try {
-      if (!editParty.name || !editParty.manifesto) {
-        return Swal.fire("Error", "Name and manifesto are required", "error");
-      }
-
-      const formData = new FormData();
-      formData.append("name", editParty.name);
-      formData.append("manifesto", editParty.manifesto);
-      
-      if (editParty.symbol && typeof editParty.symbol !== 'string') {
-        formData.append("symbol", editParty.symbol);
-      }
-
-      await axios.put(`http://localhost:5000/api/parties/${editParty._id}`, formData);
-      Swal.fire("Updated", "Party updated successfully!", "success");
-      fetchParties();
-      setEditParty(null);
-      document.getElementById("editModal").close();
-    } catch (error) {
-      console.error("Error updating party:", error);
-      const errorMessage = error.response?.data?.message || "Could not update party";
-      Swal.fire("Error", errorMessage, "error");
-    }
-  };
-
-  const handleDeleteParty = async (partyId) => {
-    const confirmDelete = await Swal.fire({
+  const handleDelete = async (partyId) => {
+    const result = await Swal.fire({
       title: "Are you sure?",
       text: "This action cannot be undone!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
     });
 
-    if (confirmDelete.isConfirmed) {
+    if (result.isConfirmed) {
       try {
-        await axios.delete(`http://localhost:5000/api/parties/${partyId}`);
-        Swal.fire("Deleted!", "Party has been deleted.", "success");
-        fetchParties();
+        await deleteParty(partyId);
+        Swal.fire("Deleted!", "The party has been deleted.", "success");
+        loadParties();
       } catch (error) {
-        console.error("Error deleting party:", error);
-        const errorMessage = error.response?.data?.message || "Could not delete party";
-        Swal.fire("Error", errorMessage, "error");
+        Swal.fire("Error!", "Failed to delete the party.", "error");
       }
     }
   };
 
-  const filteredParties = parties.filter((party) =>
-    party.name?.toLowerCase().includes(search.toLowerCase())
-  );
-  
-  const paginatedParties = filteredParties.slice(
-    (currentPage - 1) * itemsPerPage, 
-    currentPage * itemsPerPage
-  );
+  const handleFormSubmit = async (formData) => {
+    setFormLoading(true);
+    try {
+      if (partyToEdit) {
+        await updateParty(partyToEdit._id, formData);
+        Swal.fire("Success!", "Party updated successfully.", "success");
+      } else {
+        await addParty(formData);
+        Swal.fire("Success!", "Party added successfully.", "success");
+      }
+      setIsFormVisible(false);
+      setPartyToEdit(null);
+      loadParties();
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "An error occurred.";
+      Swal.fire("Error!", errorMessage, "error");
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
-  // Helper function to render Base64 image
+  const openAddForm = () => {
+    setPartyToEdit(null);
+    setIsFormVisible(true);
+  };
+
+  const openEditForm = (party) => {
+    setPartyToEdit(party);
+    setIsFormVisible(true);
+  };
+
   const renderPartySymbol = (symbolBase64) => {
     if (!symbolBase64) return null;
     return `data:image/jpeg;base64,${symbolBase64}`;
   };
 
   return (
-    <div className="flex-1 p-6 bg-[#12172d] text-white">
-      <h1 className="text-2xl font-bold mb-8">Admin Parties Management</h1>
-      
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 bg-gray-900 min-h-screen text-white">
+      <h1 className="text-3xl font-bold mb-6 text-center">Party Management</h1>
+
+      <div className="flex justify-between items-center mb-4">
         <input
           type="text"
           placeholder="Search Parties..."
-          className="w-1/2 p-2 rounded bg-[#1e253f] text-white border-none"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchTerm}
+          onChange={handleSearch}
+          className="p-2 rounded bg-gray-800 text-white"
         />
-        <div className="flex gap-2">
-          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center">
-            Export CSV
-          </button>
-          <button 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center"
-            onClick={() => document.getElementById("addModal").showModal()}
-          >
-            Add Party
-          </button>
-        </div>
+        <button onClick={openAddForm} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+          Add Party
+        </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-[#1e253f] rounded-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-[#242c48] text-gray-200">
-            <tr>
-              <th className="text-left p-4">Party Symbol</th>
-              <th className="text-left p-4">Name</th>
-              <th className="text-left p-4">Manifesto</th>
-              <th className="text-left p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedParties.length > 0 ? (
-              paginatedParties.map((party) => (
-                <tr key={party._id} className="border-b border-[#2e344f]">
-                  <td className="p-4">
-                    <img
-                      src={renderPartySymbol(party.symbol)}
-                      alt="Party Symbol"
-                      className="w-12 h-12 object-cover rounded"
-                    />
+      {loading && <p>Loading parties...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+
+      {!loading && !error && (
+        <div className="overflow-x-auto">
+          <table className="w-full bg-gray-800 rounded">
+            <thead>
+              <tr className="bg-gray-700">
+                <th className="p-3 text-left">Symbol</th>
+                <th className="p-3 text-left">Name</th>
+                <th className="p-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parties.map((party) => (
+                <tr key={party._id} className="border-b border-gray-700 hover:bg-gray-700">
+                  <td className="p-3">
+                    <img src={renderPartySymbol(party.symbol)} alt={party.name} className="w-12 h-12 object-contain" />
                   </td>
-                  <td className="p-4">{party.name}</td>
-                  <td className="p-4">{party.manifesto}</td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <button
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                        onClick={() => {
-                          setEditParty(party);
-                          document.getElementById("editModal").showModal();
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                        onClick={() => handleDeleteParty(party._id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
+                  <td className="p-3">{party.name}</td>
+                  <td className="p-3">
+                    <button onClick={() => openEditForm(party)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded mr-2">Edit</button>
+                    <button onClick={() => handleDelete(party._id)} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">Delete</button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="p-4 text-center text-gray-400">
-                  No parties available.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {filteredParties.length > 0 && (
-        <div className="flex justify-center mt-4">
-          <button
-            className="bg-[#242c48] hover:bg-[#2e344f] text-white font-bold py-2 px-4 rounded-l"
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            Prev
-          </button>
-          <span className="bg-[#242c48] text-white font-bold py-2 px-4">
-            {currentPage}
-          </span>
-          <button
-            className="bg-[#242c48] hover:bg-[#2e344f] text-white font-bold py-2 px-4 rounded-r"
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= Math.ceil(filteredParties.length / itemsPerPage)}
-          >
-            Next
-          </button>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Add Modal */}
-      <dialog id="addModal" className="p-6 bg-[#1e253f] text-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Add Party</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-1">Party Name</label>
-            <input
-              type="text"
-              placeholder="Enter party name"
-              className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161]"
-              onChange={(e) => setNewParty({ ...newParty, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block mb-1">Manifesto</label>
-            <textarea
-              placeholder="Enter party manifesto"
-              className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161] min-h-[100px]"
-              onChange={(e) => setNewParty({ ...newParty, manifesto: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block mb-1">Party Symbol</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161]"
-              onChange={(e) => setNewParty({ ...newParty, symbol: e.target.files[0] })}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end mt-6 gap-2">
-          <button 
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded" 
-            onClick={() => document.getElementById("addModal").close()}
-          >
-            Cancel
-          </button>
-          <button 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-            onClick={handleAddParty}
-          >
-            Add Party
-          </button>
-        </div>
-      </dialog>
+      <div className="flex justify-center items-center mt-6">
+        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 bg-gray-700 rounded disabled:opacity-50">
+          Previous
+        </button>
+        <span className="px-4">Page {currentPage} of {totalPages}</span>
+        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 bg-gray-700 rounded disabled:opacity-50">
+          Next
+        </button>
+      </div>
 
-      {/* Edit Modal */}
-      <dialog id="editModal" className="p-6 bg-[#1e253f] text-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Edit Party</h2>
-        {editParty && (
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-1">Party Name</label>
-              <input
-                type="text"
-                placeholder="Enter party name"
-                value={editParty.name}
-                className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161]"
-                onChange={(e) => setEditParty({ ...editParty, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Manifesto</label>
-              <textarea
-                placeholder="Enter party manifesto"
-                value={editParty.manifesto}
-                className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161] min-h-[100px]"
-                onChange={(e) => setEditParty({ ...editParty, manifesto: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block mb-1">Party Symbol</label>
-              <input
-                type="file"
-                accept="image/*"
-                className="w-full p-2 rounded bg-[#242c48] text-white border border-[#3a4161]"
-                onChange={(e) => setEditParty({ ...editParty, symbol: e.target.files[0] })}
-              />
-              {editParty.symbol && (
-                <div className="mt-2">
-                  <p>Current Symbol:</p>
-                  <img 
-                    src={typeof editParty.symbol === 'string' ? renderPartySymbol(editParty.symbol) : ''}
-                    alt="Current Party Symbol" 
-                    className="w-16 h-16 object-cover rounded mt-1" 
-                  />
-                </div>
-              )}
-            </div>
+      {isFormVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 className="text-2xl font-bold mb-6 text-white">{partyToEdit ? "Edit Party" : "Add Party"}</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              // Use PartyForm logic here
+              const form = e.target;
+              const formData = new FormData(form);
+              if (!partyToEdit && !formData.get('symbol')) {
+                alert('Party symbol is required.');
+                return;
+              }
+              try {
+                if (partyToEdit) {
+                  await updateParty(partyToEdit._id, formData);
+                  Swal.fire("Success!", "Party updated successfully.", "success");
+                } else {
+                  await addParty(formData);
+                  Swal.fire("Success!", "Party added successfully.", "success");
+                }
+                setIsFormVisible(false);
+                setPartyToEdit(null);
+                loadParties();
+              } catch (error) {
+                Swal.fire("Error!", error.response?.data?.message || "An error occurred.", "error");
+              }
+            }} className="space-y-4">
+              <input name="name" type="text" defaultValue={partyToEdit?.name || ''} placeholder="Party Name" required className="w-full p-3 rounded bg-gray-700 text-white" />
+              <input name="founder" type="text" defaultValue={partyToEdit?.founder || ''} placeholder="Founder" required className="w-full p-3 rounded bg-gray-700 text-white" />
+              <input name="foundedYear" type="number" defaultValue={partyToEdit?.foundedYear || ''} placeholder="Founded Year" required className="w-full p-3 rounded bg-gray-700 text-white" />
+              <input name="ideology" type="text" defaultValue={partyToEdit?.ideology || ''} placeholder="Ideology" required className="w-full p-3 rounded bg-gray-700 text-white" />
+              <input name="manifesto" type="text" defaultValue={partyToEdit?.manifesto || ''} placeholder="Manifesto" required className="w-full p-3 rounded bg-gray-700 text-white" />
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm font-medium text-white">Party Symbol</label>
+                <input name="symbol" type="file" accept="image/*" className="w-full p-3 rounded bg-gray-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" />
+                {partyToEdit?.symbol && (
+                  <div className="mt-2">
+                    <img src={`data:image/png;base64,${partyToEdit.symbol}`} alt="Symbol Preview" className="h-20 w-20 object-contain border rounded-md" />
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-4 pt-4">
+                <button type="button" onClick={() => { setIsFormVisible(false); setPartyToEdit(null); }} className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Cancel</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">{partyToEdit ? "Update" : "Add"}</button>
+              </div>
+            </form>
           </div>
-        )}
-        <div className="flex justify-end mt-6 gap-2">
-          <button 
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded" 
-            onClick={() => document.getElementById("editModal").close()}
-          >
-            Cancel
-          </button>
-          <button 
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            onClick={handleEditParty}
-          >
-            Update Party
-          </button>
         </div>
-      </dialog>
+      )}
     </div>
   );
 };
