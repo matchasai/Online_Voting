@@ -16,8 +16,23 @@ const PartySchema = new mongoose.Schema({
     required: [true, "Manifesto is required"],
     minlength: [10, "Manifesto should be at least 10 characters"],
   },
+  founder: {
+    type: String,
+    required: [true, "Founder name is required"],
+    trim: true,
+  },
+  foundedYear: {
+    type: Number,
+    required: [true, "Founded year is required"],
+    min: 1800,
+    max: new Date().getFullYear(),
+  },
+  ideology: {
+    type: String,
+    required: [true, "Ideology is required"],
+    trim: true,
+  },
   voteCount: { type: Number, default: 0 },
-  
 }, {
   timestamps: true,
   collation: { locale: 'en', strength: 2 }

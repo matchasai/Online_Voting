@@ -11,7 +11,7 @@ import { uploadMiddleware } from "../middleware/upload.js";
 const router = express.Router();
 
 // ✅ Create a party
-router.post("/", uploadMiddleware, createParty);
+router.post("/", uploadMiddleware("symbol"), createParty);
 
 // ✅ Fetch all parties
 router.get("/", getParties);
@@ -20,7 +20,7 @@ router.get("/", getParties);
 router.get("/:id", getPartyById);
 
 // ✅ Update a party (Image update optional)
-router.put("/:id", uploadMiddleware, updateParty);
+router.put("/:id", uploadMiddleware("symbol"), updateParty);
 
 // ✅ Delete a party
 router.delete("/:id", deleteParty);

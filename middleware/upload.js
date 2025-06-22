@@ -20,8 +20,8 @@ const upload = multer({
 });
 
 // ✅ Middleware function for single file upload
-export const uploadMiddleware = (req, res, next) => {
-  upload.single("symbol")(req, res, (err) => {
+export const uploadMiddleware = (fieldName) => (req, res, next) => {
+  upload.single(fieldName)(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ success: false, message: err.message });
     } else if (err) {

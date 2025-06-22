@@ -13,6 +13,11 @@ export const addCandidate = async (req, res) => {
     if (!name || !partyId || !constituencyId) {
       return res.status(400).json({ message: "All fields are required" });
     }
+    if (!req.file) {
+      return res.status(400).json({ message: "Candidate image is required" });
+    }
+
+    const image = req.file.buffer.toString("base64");
 
     const party = await Party.findById(partyId).session(session);
     if (!party) throw new Error("Party not found");
@@ -26,7 +31,7 @@ export const addCandidate = async (req, res) => {
       throw new Error("Candidate with this name already exists in the constituency");
     }
 
-    const newCandidate = new Candidate({ name, party: partyId, constituency: constituencyId });
+    const newCandidate = new Candidate({ name, party: partyId, constituency: constituencyId, image });
     await newCandidate.save({ session });
 
     await Constituency.findByIdAndUpdate(constituencyId, { $push: { candidates: newCandidate._id } }, { session });
@@ -42,13 +47,64 @@ export const addCandidate = async (req, res) => {
   }
 };
 
-// ✅ Get all candidates
+// ✅ Get all candidates with pagination, search, and filtering
 export const getAllCandidates = async (req, res) => {
   try {
-    const candidates = await Candidate.find()
-      .populate("party", "name")
-      .populate("constituency", "name");
-    res.status(200).json(candidates);
+    const { page = 1, limit = 10, search = '', district: districtId, constituency: constituencyId } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+
+    // Build search query for candidate name
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    if (districtId && constituencyId) {
+      // Check if constituencyId is in the district's constituencies
+      const constituenciesInDistrict = await Constituency.find({ district: districtId }).select('_id');
+      const constituencyIds = constituenciesInDistrict.map(c => c._id.toString());
+      if (constituencyIds.includes(constituencyId)) {
+        query.constituency = constituencyId;
+      } else {
+        // Return empty result if constituency does not belong to district
+        return res.status(200).json({ candidates: [], totalPages: 0, currentPage: 1, totalCandidates: 0 });
+      }
+    } else if (districtId) {
+      const constituenciesInDistrict = await Constituency.find({ district: districtId }).select('_id');
+      const constituencyIds = constituenciesInDistrict.map(c => c._id);
+      query.constituency = { $in: constituencyIds };
+    } else if (constituencyId) {
+      query.constituency = constituencyId;
+    }
+
+    const candidates = await Candidate.find(query)
+      .select("+image")
+      .populate({
+          path: 'party',
+          select: 'name symbol'
+      })
+      .populate({
+          path: 'constituency',
+          select: 'name district',
+          populate: {
+              path: 'district',
+              select: 'name'
+          }
+      })
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalCandidates = await Candidate.countDocuments(query);
+    const totalPages = Math.ceil(totalCandidates / limit);
+
+    res.status(200).json({
+      candidates,
+      totalPages,
+      currentPage: parseInt(page),
+      totalCandidates,
+    });
   } catch (error) {
     res.status(500).json({ message: "Error fetching candidates", error: error.message });
   }
@@ -83,6 +139,10 @@ export const updateCandidate = async (req, res) => {
       const constituency = await Constituency.findById(constituencyId);
       if (!constituency) return res.status(404).json({ message: "Constituency not found" });
       updateFields.constituency = constituencyId;
+    }
+
+    if (req.file) {
+      updateFields.image = req.file.buffer.toString("base64");
     }
 
     const updatedCandidate = await Candidate.findByIdAndUpdate(req.params.id, updateFields, { new: true });

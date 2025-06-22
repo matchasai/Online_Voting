@@ -6,6 +6,7 @@ const ConstituencySchema = new mongoose.Schema(
     district: { type: mongoose.Schema.Types.ObjectId, ref: "District", required: true },
     candidates: [{ type: mongoose.Schema.Types.ObjectId, ref: "Candidate" }],
     votersCount: { type: Number, default: 0 },
+    notaVotes: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

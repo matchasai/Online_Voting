@@ -6,10 +6,13 @@ import {
     getAdminDashboard,
     getAllUsers,
     getNonVotedUsers,
+    getTopCandidates,
+    getTopConstituencies,
     getTotalUsers,
     getValidDistricts,
     getVotedUsers,
     getVotes,
+    getVotesTrend,
     resetAllVotes,
     resetVote,
     submitVote,
@@ -43,5 +46,10 @@ router.get("/stats/non-voted", adminAuth, getNonVotedUsers);
 router.put("/vote", authMiddleware, submitVote);
 router.put("/resetvote/:id", adminAuth, resetVote); // Fixed to include ID parameter
 router.put("/resetallvotes", adminAuth, resetAllVotes);
+
+// Analytics Routes
+router.get("/analytics/votes-trend", adminAuth, getVotesTrend);
+router.get("/analytics/top-constituencies", adminAuth, getTopConstituencies);
+router.get("/analytics/top-candidates", adminAuth, getTopCandidates);
 
 export default router;

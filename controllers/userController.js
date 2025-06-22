@@ -1,9 +1,29 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import validator from "validator";
+import Candidate from "../models/Candidate.js";
 import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
+import Party from "../models/Party.js";
 import User from "../models/User.js";
+
+// ✅ Get User by Aadhar Number (New)
+export const getUserByAadhar = async (req, res) => {
+    try {
+        const { aadharNumber } = req.body;
+        if (!aadharNumber) {
+            return res.status(400).json({ message: "Aadhar number is required" });
+        }
+        const user = await User.findOne({ aadharNumber }).select("name");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("Error fetching user by aadhar:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
 
 // ✅ Generate JWT Token
 const generateToken = (user) => {
@@ -96,7 +116,7 @@ export const login = async (req, res) => {
         }
 
         // Check if user exists
-        const user = await User.findOne({ aadharNumber }).select("+password");
+        const user = await User.findOne({ aadharNumber }).select("+password name");
         if (!user) {
             return res.status(400).json({ message: "Aadhar Number not registered" });
         }
@@ -109,7 +129,7 @@ export const login = async (req, res) => {
 
         // Generate token
         const token = generateToken(user);
-        res.status(200).json({ message: "Login successful", token });
+        res.status(200).json({ message: "Login successful", token, username: user.name });
     } catch (error) {
         console.error("Login Error:", error);
         res.status(500).json({ message: "Server Error", error: error.message });
@@ -185,4 +205,16 @@ export const getUserProfile = async (req, res) => {
         console.error("Error fetching user profile:", error);
         res.status(500).json({ message: "Server Error", error: error.message });
     }
+};
+
+// Reset all votes for all users, candidates, and parties
+export const resetAllVotes = async (req, res) => {
+  try {
+    await User.updateMany({}, { hasVoted: false });
+    await Candidate.updateMany({}, { voteCount: 0 });
+    await Party.updateMany({}, { voteCount: 0 });
+    res.status(200).json({ message: 'All votes have been reset.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to reset votes.', error: error.message });
+  }
 };

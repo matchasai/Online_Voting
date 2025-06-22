@@ -27,12 +27,20 @@ export const addDistrict = async (req, res) => {
   }
 };
 
-// ✅ Get all districts
+// ✅ Get all districts with search
 export const getAllDistricts = async (req, res) => {
   try {
-    const districts = await District.find()
+    const { search = '' } = req.query;
+    
+    const query = {};
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    const districts = await District.find(query)
       .populate("constituencies", "name")
-      .populate("candidates", "name");
+      .populate("candidates", "name")
+      .sort({ name: 1 });
 
     res.status(200).json(districts);
   } catch (error) {

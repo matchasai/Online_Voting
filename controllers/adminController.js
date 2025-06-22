@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
 import Party from "../models/Party.js";
 import User from "../models/User.js";
@@ -8,17 +9,27 @@ import User from "../models/User.js";
 // ✅ Fetch all users with pagination and sorting
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, search = "" } = req.query;
     const skip = (page - 1) * limit;
 
-    console.log(`Fetching users: page=${page}, limit=${limit}, skip=${skip}`);
+    const query = {};
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      query.$or = [
+        { name: searchRegex },
+        { aadharNumber: searchRegex },
+        { mobile: searchRegex },
+      ];
+    }
 
-    const users = await User.find({}, "-password")
+    console.log(`Fetching users: page=${page}, limit=${limit}, skip=${skip}, search='${search}'`);
+
+    const users = await User.find(query, "-password")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    const totalUsers = await User.countDocuments();
+    const totalUsers = await User.countDocuments(query);
 
     console.log("Total users:", totalUsers);
     console.log("Fetched users:", users.length);
@@ -244,7 +255,11 @@ export const updateUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid Aadhar number. Must be 12 digits" });
     }
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : user.password;
+    // Only update password if provided and not empty
+    let hashedPassword = user.password;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
 
     user.name = name || user.name;
     user.aadharNumber = aadharNumber || user.aadharNumber;
@@ -284,23 +299,29 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// ✅ Reset All Votes: Set hasVoted to false for all users
+// ✅ Reset All Votes: Set hasVoted to false for all users, and reset party, candidate, and NOTA votes
 export const resetAllVotes = async (req, res) => {
   try {
     console.log("Resetting all votes...");
-    
     // Reset user voting status
     const userResult = await User.updateMany({}, { $set: { hasVoted: false } });
     console.log(`Reset voting status for ${userResult.modifiedCount} users`);
-    
     // Reset party vote counts
     const partyResult = await Party.updateMany({}, { $set: { voteCount: 0 } });
     console.log(`Reset vote counts for ${partyResult.modifiedCount} parties`);
-    
-    res.status(200).json({ 
+    // Reset candidate vote counts
+    const Candidate = (await import('../models/Candidate.js')).default;
+    const candidateResult = await Candidate.updateMany({}, { $set: { votes: 0 } });
+    console.log(`Reset vote counts for ${candidateResult.modifiedCount} candidates`);
+    // Reset NOTA votes in all constituencies
+    const notaResult = await Constituency.updateMany({}, { $set: { notaVotes: 0 } });
+    console.log(`Reset NOTA votes for ${notaResult.modifiedCount} constituencies`);
+    res.status(200).json({
       message: "All votes have been reset successfully!",
       usersReset: userResult.modifiedCount,
-      partiesReset: partyResult.modifiedCount
+      partiesReset: partyResult.modifiedCount,
+      candidatesReset: candidateResult.modifiedCount,
+      notaReset: notaResult.modifiedCount
     });
   } catch (error) {
     console.error("Error resetting all votes:", error);
@@ -397,5 +418,66 @@ export const submitVote = async (req, res) => {
   } catch (error) {
     console.error("Error submitting vote:", error);
     res.status(500).json({ message: "Server error while submitting vote.", error: error.message });
+  }
+};
+
+// Votes trend by day (using User model's updatedAt)
+export const getVotesTrend = async (req, res) => {
+  try {
+    const trend = await User.aggregate([
+      { $match: { hasVoted: true } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } },
+          votes: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+    res.json({ trend });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching votes trend", error: error.message });
+  }
+};
+
+// Top constituencies by turnout and NOTA
+export const getTopConstituencies = async (req, res) => {
+  try {
+    const constituencies = await Constituency.find().populate("district");
+    const data = await Promise.all(constituencies.map(async (c) => {
+      const voters = await User.countDocuments({ constituency: c._id });
+      const voted = await User.countDocuments({ constituency: c._id, hasVoted: true });
+      return {
+        name: c.name,
+        district: c.district?.name || "",
+        turnout: voters ? Math.round((voted / voters) * 100) : 0,
+        nota: c.notaVotes || 0
+      };
+    }));
+    const topTurnout = [...data].sort((a, b) => b.turnout - a.turnout).slice(0, 5);
+    const topNota = [...data].sort((a, b) => b.nota - a.nota).slice(0, 5);
+    res.json({ topTurnout, topNota });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching top constituencies", error: error.message });
+  }
+};
+
+// Get top 25 candidates by votes
+export const getTopCandidates = async (req, res) => {
+  try {
+    const topCandidates = await (await import('../models/Candidate.js')).default.find()
+      .populate({ path: 'party', select: 'name' })
+      .populate({ path: 'constituency', select: 'name' })
+      .sort({ votes: -1 })
+      .limit(25);
+    const result = topCandidates.map(c => ({
+      name: c.name,
+      party: c.party?.name || '',
+      constituency: c.constituency?.name || '',
+      votes: c.votes
+    }));
+    res.status(200).json({ topCandidates: result });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching top candidates", error: error.message });
   }
 };
