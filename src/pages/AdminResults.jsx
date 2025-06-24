@@ -16,13 +16,13 @@ const AdminResults = () => {
 
   // Fetch both voting and results times
   useEffect(() => {
-    fetch("http://localhost:5000/api/voting/start")
+    fetch("https://deshkavote-backend.onrender.com/api/voting/start")
       .then(res => res.json())
       .then(data => {
         if (data.date) setVotingDate(data.date);
         if (data.time) setVotingTime(data.time);
       });
-    fetch("http://localhost:5000/api/results/time")
+    fetch("https://deshkavote-backend.onrender.com/api/results/time")
       .then(res => res.json())
       .then(data => {
         if (data.date) setResultsDate(data.date);
@@ -34,7 +34,7 @@ const AdminResults = () => {
   useEffect(() => {
     setResultsLoading(true);
     setResultsError("");
-    fetch("http://localhost:5000/api/votes/parties")
+    fetch("https://deshkavote-backend.onrender.com/api/votes/parties")
       .then(res => res.json())
       .then(data => {
         setPartyResults(Array.isArray(data.parties) ? data.parties : []);
@@ -52,7 +52,7 @@ const AdminResults = () => {
       Swal.fire({ icon: "error", title: "Oops...", text: "Please select both date and time!" });
       return;
     }
-    const res = await fetch("http://localhost:5000/api/voting/start", {
+    const res = await fetch("https://deshkavote-backend.onrender.com/api/voting/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: votingDate, time: votingTime }),
@@ -70,7 +70,7 @@ const AdminResults = () => {
       Swal.fire({ icon: "error", title: "Oops...", text: "Please select both date and time!" });
       return;
     }
-    const res = await fetch("http://localhost:5000/api/results/time", {
+    const res = await fetch("https://deshkavote-backend.onrender.com/api/results/time", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: resultsDate, time: resultsTime }),

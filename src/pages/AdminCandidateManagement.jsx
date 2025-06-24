@@ -55,7 +55,7 @@ export default function AdminCandidateManagement() {
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:5000/api/candidates`, {
+      const res = await axios.get(`https://deshkavote-backend.onrender.com/api/candidates`, {
         params: {
           page: currentPage,
           limit,
@@ -74,7 +74,7 @@ export default function AdminCandidateManagement() {
 
   const fetchParties = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/parties");
+      const res = await axios.get("https://deshkavote-backend.onrender.com/api/parties");
       if (res.data && res.data.data && Array.isArray(res.data.data.parties)) {
         setParties(res.data.data.parties);
       } else {
@@ -89,7 +89,7 @@ export default function AdminCandidateManagement() {
 
   const fetchDistricts = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/districts");
+      const res = await axios.get("https://deshkavote-backend.onrender.com/api/districts");
       setDistricts(res.data);
     } catch (err) {
       toast.error("Error fetching districts");
@@ -98,7 +98,7 @@ export default function AdminCandidateManagement() {
 
   const fetchConstituencies = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/constituencies", {
+      const res = await axios.get("https://deshkavote-backend.onrender.com/api/constituencies", {
         params: { limit: 1000 }, // Fetch all constituencies for dropdowns
       });
       setConstituencies(res.data.constituencies);
@@ -136,13 +136,13 @@ export default function AdminCandidateManagement() {
       };
       if (editData) {
         await axios.put(
-          `http://localhost:5000/api/candidates/${editData._id}`,
+          `https://deshkavote-backend.onrender.com/api/candidates/${editData._id}`,
           data,
           config
         );
         toast.success("Candidate updated successfully!");
       } else {
-        await axios.post("http://localhost:5000/api/candidates/add", data, config);
+        await axios.post("https://deshkavote-backend.onrender.com/api/candidates/add", data, config);
         toast.success("Candidate added successfully!");
       }
       fetchCandidates();
@@ -165,7 +165,7 @@ export default function AdminCandidateManagement() {
     if (!window.confirm("Are you sure you want to delete this candidate?"))
       return;
     try {
-      await axios.delete(`http://localhost:5000/api/candidates/${id}`);
+      await axios.delete(`https://deshkavote-backend.onrender.com/api/candidates/${id}`);
       toast.success("Candidate deleted successfully");
       fetchCandidates();
     } catch (err) {

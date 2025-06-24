@@ -81,7 +81,7 @@ export default function AdminVotes() {
     const fetchTopCandidates = async () => {
       try {
         const token = localStorage.getItem("adminToken");
-        const res = await axios.get("http://localhost:5000/api/admin/analytics/top-candidates", {
+        const res = await axios.get("https://deshkavote-backend.onrender.com/api/admin/analytics/top-candidates", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTopCandidates(res.data.topCandidates || []);
@@ -102,10 +102,10 @@ export default function AdminVotes() {
     setError("");
     try {
       const [partyRes, districtRes, partyListRes, constituencyRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/votes/parties", getAuthHeader()),
-        axios.get("http://localhost:5000/api/districts", getAuthHeader()),
-        axios.get("http://localhost:5000/api/parties", getAuthHeader()),
-        axios.get("http://localhost:5000/api/constituencies", getAuthHeader()),
+        axios.get("https://deshkavote-backend.onrender.com/api/votes/parties", getAuthHeader()),
+        axios.get("https://deshkavote-backend.onrender.com/api/districts", getAuthHeader()),
+        axios.get("https://deshkavote-backend.onrender.com/api/parties", getAuthHeader()),
+        axios.get("https://deshkavote-backend.onrender.com/api/constituencies", getAuthHeader()),
       ]);
       setPartyVotes(partyRes.data.parties || []);
       setDistricts(districtRes.data || []);
@@ -122,7 +122,7 @@ export default function AdminVotes() {
     setLoading(true);
     setError("");
     try {
-      let url = `http://localhost:5000/api/candidates?page=${page}&limit=${pageSize}`;
+      let url = `https://deshkavote-backend.onrender.com/api/candidates?page=${page}&limit=${pageSize}`;
       if (selectedDistrict) url += `&district=${selectedDistrict}`;
       if (selectedParty) url += `&party=${selectedParty}`;
       if (selectedConstituency) url += `&constituency=${selectedConstituency}`;
@@ -139,11 +139,11 @@ export default function AdminVotes() {
 
   const fetchNotaVotes = async () => {
     if (selectedConstituency) {
-      axios.get(`http://localhost:5000/api/constituencies/nota/constituency/${selectedConstituency}`)
+      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/nota/constituency/${selectedConstituency}`)
         .then(res => setNotaVotes(res.data.notaVotes || 0))
         .catch(() => setNotaVotes(0));
     } else if (selectedDistrict) {
-      axios.get(`http://localhost:5000/api/constituencies/nota/district/${selectedDistrict}`)
+      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/nota/district/${selectedDistrict}`)
         .then(res => setNotaVotes(res.data.totalNota || 0))
         .catch(() => setNotaVotes(0));
     } else {
@@ -153,11 +153,11 @@ export default function AdminVotes() {
 
   const fetchTurnout = async () => {
     if (selectedConstituency) {
-      axios.get(`http://localhost:5000/api/constituencies/turnout/constituency/${selectedConstituency}`)
+      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/turnout/constituency/${selectedConstituency}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else if (selectedDistrict) {
-      axios.get(`http://localhost:5000/api/constituencies/turnout/district/${selectedDistrict}`)
+      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/turnout/district/${selectedDistrict}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else {
@@ -193,7 +193,7 @@ export default function AdminVotes() {
     }
     setResetLoading(true);
     try {
-      const res = await axios.put(`http://localhost:5000/api/admin/resetallvotes`, {}, getAuthHeader());
+      const res = await axios.put(`https://deshkavote-backend.onrender.com/api/admin/resetallvotes`, {}, getAuthHeader());
       toast.success(res.data.message || "All votes reset!");
       fetchAllData();
       fetchCandidateVotes();
@@ -240,7 +240,7 @@ export default function AdminVotes() {
   const exportAllData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/candidates?limit=10000", getAuthHeader());
+      const res = await axios.get("https://deshkavote-backend.onrender.com/api/candidates?limit=10000", getAuthHeader());
       const allCandidates = res.data.candidates || [];
       const csvData = allCandidates.map((c) => ({
         Candidate: c.name,

@@ -21,7 +21,7 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/admin/login", formData);
+      const res = await axios.post("https://deshkavote-backend.onrender.com/api/admin/login", formData);
       
       localStorage.setItem("adminToken", res.data.token);
       toast.success("Login successful!", { position: "top-right", autoClose: 2000 });
