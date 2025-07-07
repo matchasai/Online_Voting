@@ -35,7 +35,10 @@ app.use("/uploads", express.static(uploadsPath));
 app.use(express.json());
 app.use(
   cors({
-    origin: ["*"], // Update with actual frontend URL
+    origin: ["http://localhost:5173",
+      "http://localhost:5174",
+      "https://deshkavote-admin.onrender.com",
+      "https://deshkavote.onrender.com"], 
     credentials: true, 
     methods: "GET, POST, PUT, DELETE",
     allowedHeaders: "Content-Type, Authorization",
