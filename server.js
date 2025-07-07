@@ -26,7 +26,7 @@ const __dirname = path.dirname(__filename);
 const uploadsPath = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
-  console.log("📂 Created 'uploads' directory.");
+  console.log(" Created 'uploads' directory.");
 }
 
 // ✅ Serve static files correctly
@@ -119,5 +119,5 @@ app.post("/api/results/time", (req, res) => {
 // ✅ Start the Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(` Server running on http://localhost:${PORT}`);
 });
