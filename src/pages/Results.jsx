@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import Votes from "./Votes";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const ResultsPage = () => {
   const [resultsDeclared, setResultsDeclared] = useState(false);
   const [targetDate, setTargetDate] = useState(null);
   useEffect(() => {
     const fetchResultsTime = async () => {
       try {
-        const res = await fetch(import.meta.env.VITE_API_URL + "/api/results/time");
+        const res = await fetch(`${API_URL}/api/results/time`);
         const data = await res.json();
         if (data.date && data.time) {
           setTargetDate(new Date(`${data.date}T${data.time}`));
