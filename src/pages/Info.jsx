@@ -2,6 +2,8 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const InfoSection = () => {
   const [search, setSearch] = useState("");
   const [parties, setParties] = useState([]);
@@ -13,7 +15,7 @@ const InfoSection = () => {
       setLoading(true);
       setError("");
       try {
-        const res = await axios.get(import.meta.env.VITE_API_URL + "/api/parties", { params: { limit: 100 } });
+        const res = await axios.get(`${API_URL}/api/parties`, { params: { limit: 100 } });
         setParties(res.data.data?.parties || []);
       } catch (err) {
         setError("Failed to load party information. Please try again later.");
@@ -31,7 +33,7 @@ const InfoSection = () => {
     
     // Handle file paths (new format)
     if (party.symbol.startsWith("/uploads/")) {
-      return `${import.meta.env.VITE_API_URL}${party.symbol}`;
+      return `${API_URL}${party.symbol}`;
     }
     
     // Handle base64 data (old format)

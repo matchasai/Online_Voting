@@ -7,6 +7,8 @@ import Navbar from "./Navbar";
 import Navbar2 from "./Navbar2";
 import headerImage from "/src/assets/background.png";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const HeroSection2 = () => {
   const { user } = useContext(UserContext);
   const [username, setUsername] = useState(user?.name || "");
@@ -55,7 +57,7 @@ const HeroSection2 = () => {
   useEffect(() => {
     const fetchVotingStart = async () => {
       try {
-        const res = await fetch(import.meta.env.VITE_API_URL + "/api/voting/start");
+        const res = await fetch(`${API_URL}/api/voting/start`);
         const data = await res.json();
         if (data.date && data.time) {
           setTargetDate(new Date(`${data.date}T${data.time}`));

@@ -14,6 +14,8 @@ import { toast } from "react-hot-toast";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 export default function AdminVotes() {
   const [partyVotes, setPartyVotes] = useState([]);
   const [candidateVotes, setCandidateVotes] = useState([]);
@@ -48,7 +50,7 @@ export default function AdminVotes() {
 
   const fetchPartyVotes = async () => {
     try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + "/api/votes/parties");
+      const res = await axios.get(`${API_URL}/api/votes/parties`);
       setPartyVotes(res.data.parties);
       setLoading(false);
     } catch (error) {
@@ -59,7 +61,7 @@ export default function AdminVotes() {
 
   const fetchDistricts = async () => {
     try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + "/api/districts");
+      const res = await axios.get(`${API_URL}/api/districts`);
       setDistricts(res.data);
     } catch (error) {
       toast.error("Error fetching districts");
@@ -69,7 +71,7 @@ export default function AdminVotes() {
   const fetchCandidateVotes = async (districtId) => {
     try {
       const res = await axios.get(
-        import.meta.env.VITE_API_URL + `/api/votes/district/${districtId}`
+        `${API_URL}/api/votes/district/${districtId}`
       );
       setCandidateVotes(res.data.candidates);
     } catch (error) {
@@ -82,8 +84,8 @@ export default function AdminVotes() {
     setStatsError("");
     try {
       const [turnoutRes, notaRes] = await Promise.all([
-        axios.get(import.meta.env.VITE_API_URL + `/api/constituencies/turnout/district/${districtId}`),
-        axios.get(import.meta.env.VITE_API_URL + `/api/constituencies/nota/district/${districtId}`),
+        axios.get(`${API_URL}/api/constituencies/turnout/district/${districtId}`),
+        axios.get(`${API_URL}/api/constituencies/nota/district/${districtId}`),
       ]);
       setTurnout(turnoutRes.data);
       setNota(notaRes.data);
@@ -100,7 +102,7 @@ export default function AdminVotes() {
     setTopLoading(true);
     setTopError("");
     try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + "/api/votes/top-candidates");
+      const res = await axios.get(`${API_URL}/api/votes/top-candidates`);
       setTopCandidates(res.data.topCandidates?.slice(0, 10) || []);
     } catch (error) {
       setTopError("Failed to load top candidates.");
