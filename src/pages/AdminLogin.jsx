@@ -3,13 +3,13 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function AdminLogin() {
-  const [formData, setFormData] = useState({ aadharNumber: "", password: "" }); // ✅ Use aadharNumber
+  const [formData, setFormData] = useState({ aadharNumber: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -21,14 +21,13 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await axios.post("https://deshkavote-backend.onrender.com/api/admin/login", formData);
-      
+      const res = await axios.post("http://localhost:5000/api/admin/login", formData);
+
       localStorage.setItem("adminToken", res.data.token);
       toast.success("Login successful!", { position: "top-right", autoClose: 2000 });
 
       setTimeout(() => navigate("/admin"), 2000);
     } catch (error) {
-      console.error("Login Error:", error.response?.data?.message || error.message);
       toast.error(error.response?.data?.message || "Invalid credentials!", { position: "top-right", autoClose: 2000 });
     } finally {
       setLoading(false);
@@ -37,7 +36,6 @@ export default function AdminLogin() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <ToastContainer />
       <motion.div
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -53,7 +51,7 @@ export default function AdminLogin() {
             <User className="absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
-              name="aadharNumber" // ✅ Fixed name
+              name="aadharNumber"
               placeholder="Aadhar Number"
               className="pl-10 w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
               value={formData.aadharNumber}

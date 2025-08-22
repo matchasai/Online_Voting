@@ -2,10 +2,12 @@ import { Pencil, PlusCircle, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { CSVLink } from "react-csv";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addDistrict, deleteDistrict, fetchAllDistricts, updateDistrict } from "../services/api";
 
 export default function AdminDistrictsManagement() {
+  const navigate = useNavigate();
   const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,6 +30,13 @@ export default function AdminDistrictsManagement() {
       setLoading(false);
     }
   }, [searchTerm]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     loadDistricts();

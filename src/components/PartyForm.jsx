@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { addParty, updateParty } from "../services/api"; // Corrected import names
+import { addParty, updateParty } from "../services/api";
 import Button from "./button";
 import InputField from "./input";
 
@@ -21,8 +21,14 @@ const PartyForm = ({ party, onSave, onCancel }) => {
       setFoundedYear(party.foundedYear || "");
       setIdeology(party.ideology || "");
       if (party.symbol) {
-        const symbolUrl = `data:image/png;base64,${party.symbol}`;
-        setPreview(symbolUrl);
+        // Handle both base64 and file path symbols
+        if (party.symbol.startsWith("data:image")) {
+          setPreview(party.symbol);
+        } else if (party.symbol.startsWith("/uploads/")) {
+          setPreview(`${import.meta.env.VITE_API_URL}${party.symbol}`);
+        } else {
+          setPreview(`data:image/png;base64,${party.symbol}`);
+        }
       }
     } else {
       setName("");
@@ -68,10 +74,10 @@ const PartyForm = ({ party, onSave, onCancel }) => {
 
     try {
       if (party) {
-        await updateParty(party._id, formData); // Corrected function call
+        await updateParty(party._id, formData);
         toast.success("Party updated successfully!");
       } else {
-        await addParty(formData); // Corrected function call
+        await addParty(formData);
         toast.success("Party created successfully!");
       }
       onSave();

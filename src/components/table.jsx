@@ -22,6 +22,5 @@ const Td = ({ children, className }) => {
   return <td className={`p-3 ${className}`}>{children}</td>;
 };
 
-// Correctly export all components
 export { Table, Tbody, Td, Th, Thead, Tr };
 

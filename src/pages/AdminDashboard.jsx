@@ -4,6 +4,7 @@ import { CSVLink } from "react-csv";
 import { AiOutlinePieChart } from "react-icons/ai";
 import { FaBuilding, FaDownload, FaMapMarkedAlt, FaRegChartBar, FaSyncAlt, FaUserCheck, FaUsers, FaUserTie, FaUserTimes } from "react-icons/fa";
 import { MdHowToVote } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import StatCard from "../components/StatCard";
 import { fetchDashboardData } from "../services/api";
@@ -11,6 +12,7 @@ import { fetchDashboardData } from "../services/api";
 const ADMIN_NAME = "Sai Sujan Matcha";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     users: 0,
     parties: 0,
@@ -30,6 +32,14 @@ export default function AdminDashboard() {
   const refreshInterval = useRef(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+      return;
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     let index = 0;
     const fullText = `Welcome, ${ADMIN_NAME}`;
     setTypingText("");
@@ -45,6 +55,14 @@ export default function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
+      // First, check if admin token is valid
+      const token = localStorage.getItem("adminToken");
+      if (!token) {
+        setError("Admin session expired. Please log in again.");
+        navigate("/admin/login");
+        return;
+      }
+      
       const [totalUsersRes, votedUsersRes, nonVotedUsersRes, partiesRes, districtsRes, constituenciesRes, candidatesRes, notaRes, trendRes, topConsRes] = await fetchDashboardData();
       
       setStats({
@@ -61,8 +79,15 @@ export default function AdminDashboard() {
 
       setVotesTrend(trendRes.data?.trend || []);
       setTopConstituencies(topConsRes.data?.topTurnout || []);
+      
     } catch (err) {
-      setError("Could not load dashboard data. Please try again.");
+      if (err.response?.status === 401) {
+        localStorage.removeItem("adminToken");
+        setError("Admin session expired. Please log in again.");
+        setTimeout(() => navigate("/admin/login"), 2000);
+      } else {
+        setError("Could not load dashboard data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -133,17 +158,17 @@ export default function AdminDashboard() {
           <FaDownload /> Download All Data
         </CSVLink>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 mb-8">
         {statCards.map((card) => (
           <StatCard key={card.label} card={card} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-8">
+        <div className="p-2 sm:p-4 bg-gray-800 shadow-lg rounded-lg overflow-x-auto min-w-0 w-full">
           <h2 className="text-lg font-semibold mb-4 text-gray-200 flex items-center gap-2"><FaRegChartBar /> Election Data Overview</h2>
-          <div className="overflow-x-auto">
-            <BarChart width={400} height={250} data={chartData} margin={{ left: 10, right: 10 }}>
+          <div className="w-full min-w-0">
+            <BarChart width={Math.min(window.innerWidth - 64, 400)} height={250} data={chartData} margin={{ left: 10, right: 10 }}>
               <XAxis dataKey="name" stroke="white" />
               <YAxis stroke="white" />
               <RechartsTooltip />
@@ -159,10 +184,10 @@ export default function AdminDashboard() {
             </BarChart>
           </div>
         </div>
-        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+        <div className="p-2 sm:p-4 bg-gray-800 shadow-lg rounded-lg overflow-x-auto min-w-0 w-full">
           <h2 className="text-lg font-semibold mb-4 text-gray-200 flex items-center gap-2"><AiOutlinePieChart /> Voter Turnout</h2>
-          <div className="overflow-x-auto">
-            <PieChart width={400} height={250}>
+          <div className="w-full min-w-0">
+            <PieChart width={Math.min(window.innerWidth - 64, 400)} height={250}>
               <Pie
                 data={[{ name: "Voted", value: stats.voted }, { name: "Not Voted", value: stats.notVoted }]}
                 dataKey="value"
@@ -182,26 +207,24 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Votes Trend Chart */}
-        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8">
+        <div className="p-2 sm:p-4 bg-gray-800 shadow-lg rounded-lg overflow-x-auto min-w-0 w-full">
           <h2 className="text-lg font-semibold mb-4 text-gray-200">Votes Over Time</h2>
-          <LineChart width={500} height={300} data={votesTrend}>
-            <XAxis dataKey="date" stroke="white" />
-            <YAxis stroke="white" />
-            <RechartsTooltip />
-            <Legend />
-            <Line type="monotone" dataKey="count" stroke="#8884d8" />
-          </LineChart>
+          <div className="w-full min-w-0">
+            <LineChart width={Math.min(window.innerWidth - 64, 500)} height={300} data={votesTrend}>
+              <XAxis dataKey="date" stroke="white" />
+              <YAxis stroke="white" />
+              <RechartsTooltip />
+              <Legend />
+              <Line type="monotone" dataKey="count" stroke="#8884d8" />
+            </LineChart>
+          </div>
         </div>
-
-        {/* Top Constituencies by Turnout */}
-        <div className="p-4 sm:p-6 bg-gray-800 shadow-lg rounded-lg">
+        <div className="p-2 sm:p-4 bg-gray-800 shadow-lg rounded-lg overflow-x-auto min-w-0 w-full">
           <h2 className="text-lg font-semibold mb-4 text-gray-200">Top 5 Constituencies by Voter Turnout</h2>
-          <ul>
+          <ul className="w-full min-w-0">
             {topConstituencies.map((c, index) => (
-              <li key={c._id || index} className="flex justify-between items-center p-2 border-b border-gray-700">
+              <li key={c._id || index} className="flex flex-wrap justify-between items-center p-2 border-b border-gray-700">
                 <span>{index + 1}. {c.name}</span>
                 <span className="font-bold">
                   {typeof c.turnoutPercentage === 'number' && !isNaN(c.turnoutPercentage)

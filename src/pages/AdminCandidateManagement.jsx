@@ -1,8 +1,10 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminCandidateManagement() {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
   const [parties, setParties] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -25,6 +27,13 @@ export default function AdminCandidateManagement() {
   const [imagePreview, setImagePreview] = useState(null);
 
   const limit = 10;
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     setLoading(true);
@@ -55,14 +64,15 @@ export default function AdminCandidateManagement() {
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`https://deshkavote-backend.onrender.com/api/candidates`, {
-        params: {
-          page: currentPage,
-          limit,
-          search: searchTerm,
-          district: selectedDistrict,
-        },
-      });
+      const params = {
+        page: currentPage,
+        limit,
+        search: searchTerm,
+      };
+      if (selectedDistrict) {
+        params.district = selectedDistrict;
+      }
+      const res = await axios.get(`http://localhost:5000/api/candidates`, { params });
       setCandidates(res.data.candidates);
       setTotalPages(res.data.totalPages);
     } catch (err) {
@@ -74,7 +84,7 @@ export default function AdminCandidateManagement() {
 
   const fetchParties = async () => {
     try {
-      const res = await axios.get("https://deshkavote-backend.onrender.com/api/parties");
+      const res = await axios.get("http://localhost:5000/api/parties");
       if (res.data && res.data.data && Array.isArray(res.data.data.parties)) {
         setParties(res.data.data.parties);
       } else {
@@ -89,7 +99,7 @@ export default function AdminCandidateManagement() {
 
   const fetchDistricts = async () => {
     try {
-      const res = await axios.get("https://deshkavote-backend.onrender.com/api/districts");
+      const res = await axios.get("http://localhost:5000/api/districts");
       setDistricts(res.data);
     } catch (err) {
       toast.error("Error fetching districts");
@@ -98,7 +108,7 @@ export default function AdminCandidateManagement() {
 
   const fetchConstituencies = async () => {
     try {
-      const res = await axios.get("https://deshkavote-backend.onrender.com/api/constituencies", {
+      const res = await axios.get("http://localhost:5000/api/constituencies", {
         params: { limit: 1000 }, // Fetch all constituencies for dropdowns
       });
       setConstituencies(res.data.constituencies);
@@ -136,13 +146,13 @@ export default function AdminCandidateManagement() {
       };
       if (editData) {
         await axios.put(
-          `https://deshkavote-backend.onrender.com/api/candidates/${editData._id}`,
+          `http://localhost:5000/api/candidates/${editData._id}`,
           data,
           config
         );
         toast.success("Candidate updated successfully!");
       } else {
-        await axios.post("https://deshkavote-backend.onrender.com/api/candidates/add", data, config);
+        await axios.post("http://localhost:5000/api/candidates/add", data, config);
         toast.success("Candidate added successfully!");
       }
       fetchCandidates();
@@ -165,7 +175,7 @@ export default function AdminCandidateManagement() {
     if (!window.confirm("Are you sure you want to delete this candidate?"))
       return;
     try {
-      await axios.delete(`https://deshkavote-backend.onrender.com/api/candidates/${id}`);
+      await axios.delete(`http://localhost:5000/api/candidates/${id}`);
       toast.success("Candidate deleted successfully");
       fetchCandidates();
     } catch (err) {
@@ -209,11 +219,48 @@ export default function AdminCandidateManagement() {
       image: null, // Don't pre-fill file input
     });
     if (candidate.image) {
-      setImagePreview(`data:image/png;base64,${candidate.image}`);
+      const imageUrl = getCandidateImageUrl(candidate);
+      setImagePreview(imageUrl);
     } else {
       setImagePreview(null);
     }
     setOpenDialog(true);
+  };
+
+  const getPartySymbolUrl = (party) => {
+    if (!party || !party.symbol) {
+      return "/party_img/nota.png";
+    }
+    
+    // Handle file paths (new format)
+    if (party.symbol.startsWith("/uploads/")) {
+      return `${import.meta.env.VITE_API_URL}${party.symbol}`;
+    }
+    
+    // Handle base64 data (old format)
+    if (party.symbol.startsWith("data:image")) {
+      return party.symbol;
+    }
+    
+    // Handle raw base64 strings (old format)
+    if (party.symbol.length > 100) {
+      return `data:image/png;base64,${party.symbol}`;
+    }
+    
+    // Fallback
+    return "/party_img/nota.png";
+  };
+
+  const getCandidateImageUrl = (candidate) => {
+    if (!candidate.image) return null;
+    if (candidate.image.startsWith("data:image")) {
+      return candidate.image; // Handle existing base64 data
+    }
+    if (candidate.image.startsWith("/uploads/")) {
+      return `http://localhost:5000${candidate.image}`; // Handle file paths
+    }
+    // Fallback to base64 for existing data
+    return `data:image/png;base64,${candidate.image}`;
   };
 
   return (
@@ -263,7 +310,7 @@ export default function AdminCandidateManagement() {
                   <td className="p-4">{candidate.name}</td>
                   <td className="p-4 flex items-center gap-2">
                     {candidate.party.symbol ? (
-                      <img src={`data:image/png;base64,${candidate.party.symbol}`} alt={candidate.party.name} className="h-8 w-8 object-contain" />
+                      <img src={getPartySymbolUrl(candidate.party)} alt={candidate.party.name} className="h-8 w-8 object-contain" />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
                         <span className="text-xs text-gray-400">No Symbol</span>

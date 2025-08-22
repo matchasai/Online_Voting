@@ -14,7 +14,7 @@ const UserForm = ({ initialData, onSubmit, onCancel, formLoading }) => {
         const response = await fetchDistricts();
         setDistricts(response.data);
       } catch (error) {
-        console.error("Failed to fetch districts", error);
+        // Handle error silently
       }
     };
     loadDistricts();
@@ -22,7 +22,7 @@ const UserForm = ({ initialData, onSubmit, onCancel, formLoading }) => {
 
   useEffect(() => {
     if (initialData) {
-      setFormData({ ...initialData, password: "" }); // Don't pre-fill password
+      setFormData({ ...initialData, password: "" });
       if (initialData.district) {
         loadConstituencies(initialData.district);
       }
@@ -34,7 +34,6 @@ const UserForm = ({ initialData, onSubmit, onCancel, formLoading }) => {
       const response = await fetchConstituenciesByDistrict(districtId);
       setConstituencies(response.data.constituencies);
     } catch (error) {
-      console.error("Failed to fetch constituencies", error);
       setConstituencies([]);
     }
   };

@@ -1,17 +1,67 @@
 import axios from "axios";
 
-const API_URL = "https://deshkavote-backend.onrender.com/api";
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("adminToken");
   return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 };
 
+// Add axios instance for admin with refresh logic
+const adminAxios = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // Needed for refresh token cookie
+});
+
+adminAxios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+adminAxios.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+      try {
+        const refreshRes = await axios.post(
+          `${API_URL}/admin/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+        const newToken = refreshRes.data.token;
+        localStorage.setItem("adminToken", newToken);
+        originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
+        return adminAxios(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem("adminToken");
+        window.location.href = "/admin/login";
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 const api = {
-  get: (endpoint, config = {}) => axios.get(`${API_URL}${endpoint}`, { ...getAuthHeader(), ...config }),
-  post: (endpoint, data, config = {}) => axios.post(`${API_URL}${endpoint}`, data, { ...getAuthHeader(), ...config }),
-  put: (endpoint, data, config = {}) => axios.put(`${API_URL}${endpoint}`, data, { ...getAuthHeader(), ...config }),
-  delete: (endpoint, config = {}) => axios.delete(`${API_URL}${endpoint}`, { ...getAuthHeader(), ...config }),
+  get: (endpoint, config = {}) => adminAxios.get(endpoint, config),
+  post: (endpoint, data, config = {}) => adminAxios.post(endpoint, data, config),
+  put: (endpoint, data, config = {}) => adminAxios.put(endpoint, data, config),
+  delete: (endpoint, config = {}) => adminAxios.delete(endpoint, config),
 };
 
 export const fetchDashboardData = () => {

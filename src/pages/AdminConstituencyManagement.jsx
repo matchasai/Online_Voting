@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addConstituency, deleteConstituency, fetchAllDistricts, fetchConstituencies, updateConstituency } from "../services/api";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminConstituencyManagement() {
+  const navigate = useNavigate();
   const [constituencies, setConstituencies] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +36,13 @@ export default function AdminConstituencyManagement() {
       setLoading(false);
     }
   }, [currentPage, searchTerm, selectedDistrict]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const loadDistricts = async () => {

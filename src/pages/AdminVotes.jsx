@@ -10,7 +10,7 @@ import {
     Tooltip
 } from "chart.js";
 import { useEffect, useRef, useState } from "react";
-import { Bar, Pie } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 import { toast } from "react-hot-toast";
 import { FaSyncAlt, FaUndo } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -78,19 +78,29 @@ export default function AdminVotes() {
 
   // Fetch top candidates on mount
   useEffect(() => {
+    // Check for adminToken before making protected requests
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+      return;
+    }
     const fetchTopCandidates = async () => {
       try {
-        const token = localStorage.getItem("adminToken");
-        const res = await axios.get("https://deshkavote-backend.onrender.com/api/admin/analytics/top-candidates", {
+        const res = await axios.get("http://localhost:5000/api/admin/analytics/top-candidates", {
           headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true
         });
         setTopCandidates(res.data.topCandidates || []);
       } catch (err) {
-        // ignore for now
+        // If unauthorized, redirect to login
+        if (err.response && err.response.status === 401) {
+          localStorage.removeItem("adminToken");
+          navigate("/admin/login");
+        }
       }
     };
     fetchTopCandidates();
-  }, []);
+  }, [navigate]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("adminToken");
@@ -102,10 +112,10 @@ export default function AdminVotes() {
     setError("");
     try {
       const [partyRes, districtRes, partyListRes, constituencyRes] = await Promise.all([
-        axios.get("https://deshkavote-backend.onrender.com/api/votes/parties", getAuthHeader()),
-        axios.get("https://deshkavote-backend.onrender.com/api/districts", getAuthHeader()),
-        axios.get("https://deshkavote-backend.onrender.com/api/parties", getAuthHeader()),
-        axios.get("https://deshkavote-backend.onrender.com/api/constituencies", getAuthHeader()),
+        axios.get("http://localhost:5000/api/votes/parties", getAuthHeader()),
+        axios.get("http://localhost:5000/api/districts", getAuthHeader()),
+        axios.get("http://localhost:5000/api/parties", getAuthHeader()),
+        axios.get("http://localhost:5000/api/constituencies", getAuthHeader()),
       ]);
       setPartyVotes(partyRes.data.parties || []);
       setDistricts(districtRes.data || []);
@@ -122,7 +132,7 @@ export default function AdminVotes() {
     setLoading(true);
     setError("");
     try {
-      let url = `https://deshkavote-backend.onrender.com/api/candidates?page=${page}&limit=${pageSize}`;
+      let url = `http://localhost:5000/api/candidates?page=${page}&limit=${pageSize}`;
       if (selectedDistrict) url += `&district=${selectedDistrict}`;
       if (selectedParty) url += `&party=${selectedParty}`;
       if (selectedConstituency) url += `&constituency=${selectedConstituency}`;
@@ -139,11 +149,11 @@ export default function AdminVotes() {
 
   const fetchNotaVotes = async () => {
     if (selectedConstituency) {
-      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/nota/constituency/${selectedConstituency}`)
+      axios.get(`http://localhost:5000/api/constituencies/nota/constituency/${selectedConstituency}`)
         .then(res => setNotaVotes(res.data.notaVotes || 0))
         .catch(() => setNotaVotes(0));
     } else if (selectedDistrict) {
-      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/nota/district/${selectedDistrict}`)
+      axios.get(`http://localhost:5000/api/constituencies/nota/district/${selectedDistrict}`)
         .then(res => setNotaVotes(res.data.totalNota || 0))
         .catch(() => setNotaVotes(0));
     } else {
@@ -153,11 +163,11 @@ export default function AdminVotes() {
 
   const fetchTurnout = async () => {
     if (selectedConstituency) {
-      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/turnout/constituency/${selectedConstituency}`)
+      axios.get(`http://localhost:5000/api/constituencies/turnout/constituency/${selectedConstituency}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else if (selectedDistrict) {
-      axios.get(`https://deshkavote-backend.onrender.com/api/constituencies/turnout/district/${selectedDistrict}`)
+      axios.get(`http://localhost:5000/api/constituencies/turnout/district/${selectedDistrict}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else {
@@ -193,7 +203,7 @@ export default function AdminVotes() {
     }
     setResetLoading(true);
     try {
-      const res = await axios.put(`https://deshkavote-backend.onrender.com/api/admin/resetallvotes`, {}, getAuthHeader());
+      const res = await axios.put(`http://localhost:5000/api/admin/resetallvotes`, {}, getAuthHeader());
       toast.success(res.data.message || "All votes reset!");
       fetchAllData();
       fetchCandidateVotes();
@@ -240,7 +250,7 @@ export default function AdminVotes() {
   const exportAllData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("https://deshkavote-backend.onrender.com/api/candidates?limit=10000", getAuthHeader());
+      const res = await axios.get("http://localhost:5000/api/candidates?limit=10000", getAuthHeader());
       const allCandidates = res.data.candidates || [];
       const csvData = allCandidates.map((c) => ({
         Candidate: c.name,
@@ -286,24 +296,24 @@ export default function AdminVotes() {
   };
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white">
-            <div className="flex flex-wrap gap-4 mb-6 items-center justify-between">
-              <select
-                value={selectedDistrict}
-                onChange={handleDistrictChange}
-                className="p-2 bg-gray-700 rounded-md flex-1 min-w-[200px]"
-              >
-                <option value="">Select District</option>
-                {districts.map((d) => (
-                  <option key={d._id} value={d._id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+    <div className="p-4 sm:p-6 bg-gray-900 min-h-screen text-white">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <select
+          value={selectedDistrict}
+          onChange={handleDistrictChange}
+          className="p-2 bg-gray-700 rounded-md w-full sm:flex-1"
+        >
+          <option value="">Select District</option>
+          {districts.map((d) => (
+            <option key={d._id} value={d._id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
         <select
           value={selectedConstituency}
           onChange={handleConstituencyChange}
-          className="p-2 bg-gray-700 rounded-md flex-1 min-w-[200px]"
+          className="p-2 bg-gray-700 rounded-md w-full sm:flex-1"
           disabled={!selectedDistrict}
         >
           <option value="">All Constituencies</option>
@@ -316,7 +326,7 @@ export default function AdminVotes() {
         <select
           value={selectedParty}
           onChange={handlePartyChange}
-          className="p-2 bg-gray-700 rounded-md flex-1 min-w-[200px]"
+          className="p-2 bg-gray-700 rounded-md w-full sm:flex-1"
         >
           <option value="">All Parties</option>
           {parties.map((p) => (
@@ -325,169 +335,89 @@ export default function AdminVotes() {
             </option>
           ))}
         </select>
-              <input
-                type="text"
-                placeholder="Search candidates..."
-                value={searchTerm}
+        <input
+          type="text"
+          placeholder="Search candidates..."
+          value={searchTerm}
           onChange={handleSearch}
-                className="p-2 bg-gray-700 rounded-md flex-1 min-w-[200px]"
-                disabled={!selectedDistrict}
-              />
+          className="p-2 bg-gray-700 rounded-md w-full sm:flex-1"
+          disabled={!selectedDistrict}
+        />
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
         <button
           onClick={exportAllData}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50"
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 w-full sm:w-auto"
           disabled={loading}
         >
           Export All Data
         </button>
         <button
           onClick={handleResetVotes}
-          className="px-4 py-2 bg-yellow-700 hover:bg-yellow-800 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-yellow-700 hover:bg-yellow-800 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2 w-full sm:w-auto"
           disabled={resetLoading || !selectedDistrict}
         >
           {resetLoading ? <FaSyncAlt className="animate-spin" /> : <FaUndo />} Reset All Votes
         </button>
       </div>
       {error && <div className="bg-red-700 text-white p-3 rounded mb-4 text-center">{error}</div>}
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-        <h2 className="text-xl font-semibold mb-4">📊 Party Votes</h2>
-        <Bar
-          data={{
-            labels: partyVotes.map((p) => p.name),
-            datasets: [
-              {
-                label: "Total Votes",
-                data: partyVotes.map((p) => p.voteCount),
-                backgroundColor: "rgba(59, 130, 246, 0.8)",
-                borderRadius: 6,
-              },
-            ],
-          }}
-          options={{
-            responsive: true,
-            plugins: { legend: { display: false } },
-          }}
-        />
-      </div>
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-        <h2 className="text-xl font-semibold mb-4">🎯 Candidate Votes & NOTA</h2>
-        <div className="mb-4 flex flex-wrap gap-4 items-center">
-          <div className="bg-gray-700 rounded-md px-4 py-2">
-            <span className="font-semibold">Total Voters:</span> {turnout.totalVoters}
-          </div>
-          <div className="bg-gray-700 rounded-md px-4 py-2">
-            <span className="font-semibold">Voted:</span> {turnout.voted}
-          </div>
-          <div className="bg-gray-700 rounded-md px-4 py-2">
-            <span className="font-semibold">Turnout:</span> {turnout.turnout}%
-          </div>
-          <div className="bg-gray-700 rounded-md px-4 py-2">
-            <span className="font-semibold">NOTA Votes:</span> {notaVotes}
-          </div>
+      <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">📊 Party Votes</h2>
+        <div className="w-full overflow-x-auto">
+          <Bar
+            data={{
+              labels: partyVotes.map((p) => p.name),
+              datasets: [
+                {
+                  label: "Total Votes",
+                  data: partyVotes.map((p) => p.voteCount),
+                  backgroundColor: "rgba(59, 130, 246, 0.8)",
+                  borderRadius: 6,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+            }}
+            height={300}
+          />
         </div>
-        <Pie
-          data={candidateChartData}
-          options={{
-            responsive: true,
-            plugins: { legend: { display: true } },
-          }}
-        />
-        <div className="overflow-x-auto mt-6">
-          <table className="w-full text-left bg-gray-700 rounded-md">
+      </div>
+
+      <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">🏆 Top 25 Candidates by Votes</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left bg-gray-700 rounded-md text-sm sm:text-base">
             <thead className="bg-gray-600">
               <tr>
-                <th className="p-3">Candidate</th>
-                <th className="p-3">Party</th>
-                <th className="p-3">Constituency</th>
-                <th className="p-3">Votes</th>
+                <th className="p-2 sm:p-3">Rank</th>
+                <th className="p-2 sm:p-3">Candidate</th>
+                <th className="p-2 sm:p-3">Party</th>
+                <th className="p-2 sm:p-3">Constituency</th>
+                <th className="p-2 sm:p-3">Votes</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedCandidates.map((c) => (
-                <tr key={c._id} className="border-t border-gray-600">
-                  <td className="p-3">{c.name}</td>
-                  <td className="p-3">{c.party?.name || c.party}</td>
-                  <td className="p-3">{c.constituency?.name || c.constituency}</td>
-                  <td className="p-3 font-bold text-blue-400">{c.votes}</td>
-                </tr>
-              ))}
-              {notaVotes > 0 && (
-                <tr className="border-t border-gray-600 bg-gray-800">
-                  <td className="p-3 font-bold text-pink-400">NOTA</td>
-                  <td className="p-3">-</td>
-                  <td className="p-3">{selectedConstituency ? filteredConstituencies.find(c => c._id === selectedConstituency)?.name : "All"}</td>
-                  <td className="p-3 font-bold text-pink-400">{notaVotes}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex justify-center mt-4 gap-2">
-            <button
-              onClick={() => setPage(1)}
-              disabled={page === 1}
-              className="px-3 py-1 rounded-md bg-gray-700 text-white disabled:opacity-50"
-            >
-              First
-            </button>
-            <button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
-              className="px-3 py-1 rounded-md bg-gray-700 text-white disabled:opacity-50"
-            >
-              Prev
-            </button>
-            <span className="px-3 py-1">Page {page} of {totalPages}</span>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={page === totalPages}
-              className="px-3 py-1 rounded-md bg-gray-700 text-white disabled:opacity-50"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => setPage(totalPages)}
-              disabled={page === totalPages}
-              className="px-3 py-1 rounded-md bg-gray-700 text-white disabled:opacity-50"
-            >
-              Last
-            </button>
-          </div>
-        )}
-            </div>
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-        <h2 className="text-xl font-semibold mb-4">🏆 Top 25 Candidates by Votes</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left bg-gray-700 rounded-md">
-                <thead className="bg-gray-600">
-                  <tr>
-                <th className="p-3">Rank</th>
-                    <th className="p-3">Candidate</th>
-                <th className="p-3">Party</th>
-                    <th className="p-3">Constituency</th>
-                    <th className="p-3">Votes</th>
-                  </tr>
-                </thead>
-                <tbody>
               {topCandidates.length === 0 ? (
                 <tr><td colSpan="5" className="text-center p-3 text-gray-400">No data</td></tr>
               ) : (
                 topCandidates.map((c, i) => (
                   <tr key={i} className="border-t border-gray-600">
-                    <td className="p-3 font-bold">{i + 1}</td>
-                    <td className="p-3">{c.name}</td>
-                    <td className="p-3">{c.party}</td>
-                        <td className="p-3">{c.constituency}</td>
-                        <td className="p-3 font-bold text-blue-400">{c.votes}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                    <td className="p-2 sm:p-3 font-bold">{i + 1}</td>
+                    <td className="p-2 sm:p-3">{c.name}</td>
+                    <td className="p-2 sm:p-3">{c.party}</td>
+                    <td className="p-2 sm:p-3">{c.constituency}</td>
+                    <td className="p-2 sm:p-3 font-bold text-blue-400">{c.votes}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

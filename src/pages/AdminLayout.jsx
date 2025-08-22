@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { BarChart, Briefcase, ChevronLeft, ChevronRight, Home, LogOut, Map, Menu, UserCircle, Users, Vote } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 
 export default function AdminLayout() {
+  const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -20,6 +21,13 @@ export default function AdminLayout() {
     if (windowWidth < 768) setSidebarOpen(false);
     else setSidebarOpen(true);
   }, [windowWidth]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   // Overlay for mobile sidebar
   const showSidebarOverlay = !isSidebarOpen && windowWidth < 768;

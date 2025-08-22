@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import AdminCandidateManagement from "./pages/AdminCandidateManagement";
 import AdminConstituencyManagement from "./pages/AdminConstituencyManagement";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -11,10 +11,13 @@ import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminVotes from "./pages/AdminVotes";
 
 function App() {
+  const location = useLocation();
+  
   return (
     <Routes>
-      {/* Public Route */}
+      {/* Public Routes */}
       <Route path="/" element={<AdminLogin />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
       
       {/* Admin Layout with Nested Routes */}
       <Route path="/admin" element={<AdminLayout />}>
@@ -28,6 +31,9 @@ function App() {
         <Route path="votes" element={<AdminVotes />} />
         <Route path="results" element={<AdminResults />} />
       </Route>
+      
+      {/* Catch-all route for unmatched paths */}
+      <Route path="*" element={<AdminLogin />} />
     </Routes>
   );
 }

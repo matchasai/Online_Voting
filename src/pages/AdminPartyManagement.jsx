@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addParty, deleteParty, fetchParties, updateParty } from "../services/api";
 
 const ITEMS_PER_PAGE = 10;
 
 const PartyManagement = () => {
+  const navigate = useNavigate();
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,6 +17,9 @@ const PartyManagement = () => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [partyToEdit, setPartyToEdit] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+
+  const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [symbolPreview, setSymbolPreview] = useState(null);
 
   const loadParties = useCallback(async () => {
     setLoading(true);
@@ -29,6 +34,13 @@ const PartyManagement = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     loadParties();
@@ -90,9 +102,40 @@ const PartyManagement = () => {
     setIsFormVisible(true);
   };
 
-  const renderPartySymbol = (symbolBase64) => {
-    if (!symbolBase64) return null;
-    return `data:image/jpeg;base64,${symbolBase64}`;
+  const handleSymbolChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSymbolPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+      setSelectedSymbol(file);
+    }
+  };
+
+  const getSymbolUrl = (party) => {
+    if (!party || !party.symbol) {
+      return "/party_img/nota.png";
+    }
+    
+    // Handle file paths (new format)
+    if (party.symbol.startsWith("/uploads/")) {
+      return `${import.meta.env.VITE_API_URL}${party.symbol}`;
+    }
+    
+    // Handle base64 data (old format)
+    if (party.symbol.startsWith("data:image")) {
+      return party.symbol;
+    }
+    
+    // Handle raw base64 strings (old format)
+    if (party.symbol.length > 100) {
+      return `data:image/png;base64,${party.symbol}`;
+    }
+    
+    // Fallback
+    return "/party_img/nota.png";
   };
 
   return (
@@ -129,7 +172,15 @@ const PartyManagement = () => {
               {parties.map((party) => (
                 <tr key={party._id} className="border-b border-gray-700 hover:bg-gray-700">
                   <td className="p-3">
-                    <img src={renderPartySymbol(party.symbol)} alt={party.name} className="w-12 h-12 object-contain" />
+                    <img 
+                      src={getSymbolUrl(party)} 
+                      alt={party.name} 
+                      className="w-12 h-12 object-contain" 
+                      onError={(e) => {
+                        e.target.src = "/party_img/nota.png";
+                        e.target.onerror = null; // Prevent infinite loop
+                      }}
+                    />
                   </td>
                   <td className="p-3">{party.name}</td>
                   <td className="p-3">
@@ -190,9 +241,7 @@ const PartyManagement = () => {
                 <label className="text-sm font-medium text-white">Party Symbol</label>
                 <input name="symbol" type="file" accept="image/*" className="w-full p-3 rounded bg-gray-700 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" />
                 {partyToEdit?.symbol && (
-                  <div className="mt-2">
-                    <img src={`data:image/png;base64,${partyToEdit.symbol}`} alt="Symbol Preview" className="h-20 w-20 object-contain border rounded-md" />
-                  </div>
+                  <img src={getSymbolUrl(partyToEdit)} alt="Symbol Preview" className="h-20 w-20 object-contain border rounded-md" />
                 )}
               </div>
               <div className="flex justify-end gap-4 pt-4">

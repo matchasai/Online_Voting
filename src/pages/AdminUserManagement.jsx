@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 import UserForm from "../components/UserForm";
@@ -8,6 +9,7 @@ import { addUser, deleteUser, fetchUsers, resetAllVotes, updateUser } from "../s
 const ITEMS_PER_PAGE = 10;
 
 const AdminUserManagement = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +35,13 @@ const AdminUserManagement = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) {
+      navigate("/admin/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     loadUsers();
@@ -119,7 +128,6 @@ const AdminUserManagement = () => {
 
   return (
     <div className="p-4 bg-gray-900 min-h-screen text-white">
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />
       <h1 className="text-3xl font-bold mb-6 text-center">User Management</h1>
       
       <div className="flex justify-between items-center mb-4 gap-2 flex-wrap">
