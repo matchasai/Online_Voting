@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../App";
 import userApi from "../utils/userApi";

@@ -1,6 +1,6 @@
 import emailjs from "@emailjs/browser";
 import { motion } from "framer-motion";
-import React, { useState } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { sanitizeInput } from "../utils/sanitizeInput";
