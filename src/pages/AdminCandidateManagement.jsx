@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 export default function AdminCandidateManagement() {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
@@ -72,7 +74,7 @@ export default function AdminCandidateManagement() {
       if (selectedDistrict) {
         params.district = selectedDistrict;
       }
-      const res = await axios.get(`http://localhost:5000/api/candidates`, { params });
+      const res = await axios.get(`${API_URL}/api/candidates`, { params });
       setCandidates(res.data.candidates);
       setTotalPages(res.data.totalPages);
     } catch (err) {
@@ -234,7 +236,7 @@ export default function AdminCandidateManagement() {
     
     // Handle file paths (new format)
     if (party.symbol.startsWith("/uploads/")) {
-      return `${import.meta.env.VITE_API_URL}${party.symbol}`;
+      return `${API_URL}${party.symbol}`;
     }
     
     // Handle base64 data (old format)

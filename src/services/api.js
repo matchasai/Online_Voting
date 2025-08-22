@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("adminToken");
@@ -9,7 +9,7 @@ const getAuthHeader = () => {
 
 // Add axios instance for admin with refresh logic
 const adminAxios = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api`,
   withCredentials: true, // Needed for refresh token cookie
 });
 

@@ -21,13 +21,14 @@ const AdminResults = () => {
   }, [navigate]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/voting/start")
+    const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+    fetch(`${API_URL}/api/voting/start`)
       .then(res => res.json())
       .then(data => {
         if (data.date) setVotingDate(data.date);
         if (data.time) setVotingTime(data.time);
       });
-    fetch("http://localhost:5000/api/results/time")
+    fetch(`${API_URL}/api/results/time`)
       .then(res => res.json())
       .then(data => {
         if (data.date) setResultsDate(data.date);
@@ -38,7 +39,8 @@ const AdminResults = () => {
   useEffect(() => {
     setResultsLoading(true);
     setResultsError("");
-    fetch("http://localhost:5000/api/votes/parties")
+    const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+    fetch(`${API_URL}/api/votes/parties`)
       .then(res => res.json())
       .then(data => {
         setPartyResults(Array.isArray(data.parties) ? data.parties : []);
@@ -55,7 +57,8 @@ const AdminResults = () => {
       Swal.fire({ icon: "error", title: "Oops...", text: "Please select both date and time!" });
       return;
     }
-    const res = await fetch("http://localhost:5000/api/voting/start", {
+    const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+    const res = await fetch(`${API_URL}/api/voting/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: votingDate, time: votingTime }),
@@ -72,7 +75,8 @@ const AdminResults = () => {
       Swal.fire({ icon: "error", title: "Oops...", text: "Please select both date and time!" });
       return;
     }
-    const res = await fetch("http://localhost:5000/api/results/time", {
+    const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+    const res = await fetch(`${API_URL}/api/results/time`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: resultsDate, time: resultsTime }),

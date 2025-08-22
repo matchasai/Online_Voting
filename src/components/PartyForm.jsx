@@ -4,6 +4,8 @@ import { addParty, updateParty } from "../services/api";
 import Button from "./button";
 import InputField from "./input";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const PartyForm = ({ party, onSave, onCancel }) => {
   const [name, setName] = useState("");
   const [manifesto, setManifesto] = useState("");
@@ -25,7 +27,7 @@ const PartyForm = ({ party, onSave, onCancel }) => {
         if (party.symbol.startsWith("data:image")) {
           setPreview(party.symbol);
         } else if (party.symbol.startsWith("/uploads/")) {
-          setPreview(`${import.meta.env.VITE_API_URL}${party.symbol}`);
+          setPreview(`${API_URL}${party.symbol}`);
         } else {
           setPreview(`data:image/png;base64,${party.symbol}`);
         }

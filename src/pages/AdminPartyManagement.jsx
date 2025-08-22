@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { addParty, deleteParty, fetchParties, updateParty } from "../services/api";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const ITEMS_PER_PAGE = 10;
 
 const PartyManagement = () => {
@@ -121,7 +123,7 @@ const PartyManagement = () => {
     
     // Handle file paths (new format)
     if (party.symbol.startsWith("/uploads/")) {
-      return `${import.meta.env.VITE_API_URL}${party.symbol}`;
+      return `${API_URL}${party.symbol}`;
     }
     
     // Handle base64 data (old format)

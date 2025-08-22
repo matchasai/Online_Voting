@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 export default function AdminLogin() {
   const [formData, setFormData] = useState({ aadharNumber: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +23,7 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/admin/login", formData);
+      const res = await axios.post(`${API_URL}/api/admin/login`, formData);
 
       localStorage.setItem("adminToken", res.data.token);
       toast.success("Login successful!", { position: "top-right", autoClose: 2000 });
