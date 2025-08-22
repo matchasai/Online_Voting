@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
-import headerImage from "../assets/background.png"; // Ensure correct path
+import headerImage from "../assets/background.png";
 import Navbar from "./Navbar";
 
 const HeroSection = () => {
   const targetDate = "2025-05-01T00:00:00";
 
-  // Countdown Timer Logic
   const calculateTimeLeft = () => {
     const difference = new Date(targetDate) - new Date();
     return difference > 0
@@ -30,10 +29,8 @@ const HeroSection = () => {
 
   return (
     <div className="relative min-h-screen flex flex-col text-white">
-      {/* Navbar */}
       <Navbar />
 
-      {/* Hero Section */}
       <div
         className="relative flex flex-1 items-center justify-center bg-cover bg-center text-center px-6 md:px-20"
         style={{
@@ -54,7 +51,6 @@ const HeroSection = () => {
             Explore Elections with Transparency & Security
           </h2>
 
-          {/* Countdown Timer */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold">Voting Starts In:</h3>
             <div className="flex justify-center gap-4 mt-4 text-lg font-bold">
@@ -66,7 +62,6 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Call-to-Action Buttons */}
           <div className="mt-10 space-x-4">
             <a href="#Info" className="bg-white text-blue-600 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all">
               View Elections

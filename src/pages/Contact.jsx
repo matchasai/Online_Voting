@@ -1,8 +1,9 @@
 import emailjs from "@emailjs/browser";
 import { motion } from "framer-motion";
 import React, { useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { sanitizeInput } from "../utils/sanitizeInput";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +14,7 @@ const Contact = () => {
   });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: sanitizeInput(e.target.value) });
   };
 
   const sendEmail = (e) => {
@@ -24,15 +25,20 @@ const Contact = () => {
       return;
     }
 
+    // Sanitize all formData before sending
+    const sanitizedData = Object.fromEntries(
+      Object.entries(formData).map(([k, v]) => [k, sanitizeInput(v)])
+    );
+
     emailjs
       .send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
         import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
         {
-          from_name: formData.name,
-          email: formData.email,
-          message: formData.message,
-          feedback_type: formData.feedbackType, // Optional: Send feedback type
+          from_name: sanitizedData.name,
+          email: sanitizedData.email,
+          message: sanitizedData.message,
+          feedback_type: sanitizedData.feedbackType, // Optional: Send feedback type
         },
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       )
@@ -41,7 +47,6 @@ const Contact = () => {
         setFormData({ name: "", email: "", feedbackType: "", message: "" });
       })
       .catch((error) => {
-        console.error("Email send error:", error);
         toast.error("Failed to send message.");
       });
   };
@@ -51,7 +56,6 @@ const Contact = () => {
 
 
 
-      <ToastContainer />
       <motion.div
         className="bg-gray-800 p-9 mt-16 rounded-lg shadow-lg w-full max-w-lg display-none"
         initial={{ opacity: 0, y: -50 }}

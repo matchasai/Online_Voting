@@ -4,53 +4,81 @@ import { Link } from "react-router-dom";
 
 const Footer2 = () => {
   return (
-    <footer className="bg-black text-white px-6 py-8">
+    <footer className="bg-gradient-to-r from-blue-900 via-black to-green-900 text-white px-8 py-12 border-t border-blue-800">
       <div className="container mx-auto flex flex-col md:flex-row justify-between items-center text-center md:text-left">
         
         {/* Left Side - Branding & Address */}
-        <div className="mb-6 md:mb-0 w-full md:w-1/3">
-          <Link to="/Home2" className="text-3xl font-extrabold block">
-            <span className="text-orange-500">Desh</span>
-            <span className="text-white">Ka</span>
-            <span className="text-green-500">Vote</span>
+        <div className="mb-6 md:mb-0 w-full md:w-1/3 space-y-4">
+          <Link to="/home" className="inline-block">
+            <div className="text-3xl font-extrabold tracking-tight drop-shadow-lg">
+              <span className="text-orange-400">Desh</span>
+              <span className="text-white">Ka</span>
+              <span className="text-green-400">Vote</span>
+            </div>
           </Link>
-          <p className="mt-2 flex justify-center md:justify-start items-center">
-            <FaMapMarkerAlt className="text-red-500 mr-2" />
+          <p className="flex justify-center md:justify-start items-center text-gray-300">
+            <FaMapMarkerAlt className="text-red-400 mr-2" />
             KL University, Vijayawada, Andhra Pradesh
+          </p>
+          <p className="text-sm text-gray-400 italic">
+            Empowering democracy through digital innovation.
           </p>
         </div>
 
         {/* Middle Section - Contact Info & Social Media */}
-        <div className="mb-6 md:mb-0 w-full md:w-1/3">
-          <h3 className="text-lg font-semibold">Contact Us</h3>
-          <p>Email: support@deshkavote.com</p>
-          <p>Phone: +91 98765 43210</p>
-          <div className="flex justify-center md:justify-start space-x-4 mt-3">
-            <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer">
-              <FaFacebook className="text-blue-500 text-2xl hover:text-blue-700" />
+        <div className="mb-6 md:mb-0 w-full md:w-1/3 space-y-4">
+          <h3 className="text-xl font-bold text-blue-300">Contact Us</h3>
+          <div className="space-y-2 text-gray-300">
+            <p>Email: support@deshkavote.com</p>
+            <p>Phone: +91 96798 37905</p>
+          </div>
+          <div className="flex justify-center md:justify-start space-x-6 mt-4">
+            <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform">
+              <FaFacebook className="text-blue-400 text-2xl hover:text-blue-300" />
             </a>
-            <a href="https://www.twitter.com" target="_blank" rel="noopener noreferrer">
-              <FaTwitter className="text-blue-400 text-2xl hover:text-blue-600" />
+            <a href="https://www.twitter.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform">
+              <FaTwitter className="text-blue-300 text-2xl hover:text-blue-200" />
             </a>
-            <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer">
-              <FaLinkedin className="text-blue-600 text-2xl hover:text-blue-800" />
+            <a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform">
+              <FaLinkedin className="text-blue-500 text-2xl hover:text-blue-400" />
             </a>
-            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer">
-              <FaInstagram className="text-pink-500 text-2xl hover:text-pink-700" />
+            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" className="hover:scale-110 transition-transform">
+              <FaInstagram className="text-pink-400 text-2xl hover:text-pink-300" />
             </a>
           </div>
         </div>
 
-        {/* Right Side - About & Info Section */}
-        <div className="w-full md:w-1/3">
-          <h3 className="text-lg font-semibold">
-            <Link to="/about" className="hover:text-gray-400">About</Link>
-          </h3>
-          <h4 className="text-lg font-semibold">
-            <Link to="/info" className="hover:text-gray-400">Info</Link>
-          </h4>
-          <p className="mt-2">Empowering democracy through digital innovation.</p>
+        {/* Right Side - Quick Links */}
+        <div className="w-full md:w-1/3 space-y-4">
+          <h3 className="text-xl font-bold text-green-300">Quick Links</h3>
+          <div className="space-y-2">
+            <div>
+              <Link to="/about" className="text-gray-300 hover:text-blue-300 transition-colors font-medium">
+                About
+              </Link>
+            </div>
+            <div>
+              <Link to="/party" className="text-gray-300 hover:text-blue-300 transition-colors font-medium">
+                Parties
+              </Link>
+            </div>
+            <div>
+              <Link to="/contact" className="text-gray-300 hover:text-blue-300 transition-colors font-medium">
+                Contact
+              </Link>
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 italic">
+            Thank you for participating in democracy.
+          </p>
         </div>
+      </div>
+      
+      {/* Bottom Border */}
+      <div className="mt-8 pt-6 border-t border-gray-700">
+        <p className="text-center text-gray-400 text-sm">
+          © 2024 DeshKaVote. All rights reserved.
+        </p>
       </div>
     </footer>
   );

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import voteImage from "../assets/vote_img.png"; // Make sure to add an image in your assets folder
+import voteImage from "../assets/vote_img.png";
 
 const WhyVote = () => {
   return (

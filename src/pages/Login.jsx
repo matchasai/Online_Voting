@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { UserContext } from "../App";
+import { sanitizeInput } from "../utils/sanitizeInput";
+import userApi from "../utils/userApi";
 
-const Login = ({ setIsLoggedIn }) => {
+const Login = () => {
+  const { setUser } = useContext(UserContext);
   const [aadharNumber, setAadharNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,31 +30,26 @@ const Login = ({ setIsLoggedIn }) => {
     }
   
     try {
-      const response = await fetch("http://localhost:5000/api/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ aadharNumber, password }),
+      const response = await userApi.post("/user/login", {
+        aadharNumber: sanitizeInput(aadharNumber),
+        password: sanitizeInput(password),
       });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
+
+      const data = response.data;
+
+      if (data.token) {
+        setUser(data); // Set user in context
         localStorage.setItem("userToken", data.token);
-        localStorage.setItem("aadharNumber", aadharNumber);
-        localStorage.setItem("username", data.username || "User");
-
-        setIsLoggedIn(true);
-
         toast.success("Login Successful!", {
           autoClose: 1000,
-          onClose: () => navigate("/Home2"), // ✅ Redirect after toast disappears
+          onClose: () => navigate("/home"), // ✅ Redirect after toast disappears
         });
       } else {
         toast.error(data.message || "Login Failed!", { autoClose: 1000 });
       }
     } catch (error) {
-      console.error("Network Error:", error);
-      toast.error("Network Error. Please try again.", { autoClose: 1000 });
+      const errorMessage = error.response?.data?.message || "Network Error. Please try again.";
+      toast.error(errorMessage, { autoClose: 1000 });
     } finally {
       setLoading(false);
     }
@@ -58,7 +57,6 @@ const Login = ({ setIsLoggedIn }) => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-      <ToastContainer position="top-right" autoClose={1000} />
       <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-96">
         <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
         <form onSubmit={handleLogin}>
@@ -67,9 +65,11 @@ const Login = ({ setIsLoggedIn }) => {
             <input
               type="text"
               value={aadharNumber}
-              onChange={(e) => setAadharNumber(e.target.value)}
+              onChange={(e) => setAadharNumber(sanitizeInput(e.target.value))}
               className="w-full px-4 py-2 mt-2 bg-gray-700 text-white rounded-lg"
               required
+              aria-label="Aadhaar Number"
+              title="Enter your 12-digit Aadhaar Number"
             />
           </div>
           <div className="mb-6">
@@ -77,9 +77,11 @@ const Login = ({ setIsLoggedIn }) => {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(sanitizeInput(e.target.value))}
               className="w-full px-4 py-2 mt-2 bg-gray-700 text-white rounded-lg"
               required
+              aria-label="Password"
+              title="Enter your password"
             />
           </div>
           <button
@@ -88,8 +90,10 @@ const Login = ({ setIsLoggedIn }) => {
               loading ? "bg-gray-600 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
             }`}
             disabled={loading}
+            aria-label="Login Button"
+            title="Click to login"
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? <span className="loader" aria-label="Loading Spinner"></span> : "Login"}
           </button>
           <div className="text-center mt-4">
             <Link to="/forgot-password" className="text-sm text-blue-400 hover:underline">

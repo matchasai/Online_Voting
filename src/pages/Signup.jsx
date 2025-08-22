@@ -2,8 +2,10 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { sanitizeInput } from "../utils/sanitizeInput";
+import userApi from "../utils/userApi";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ const Signup = () => {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/districts");
+        const response = await axios.get(import.meta.env.VITE_API_URL + "/api/districts");
         setDistricts(response.data);
       } catch (error) {
         toast.error("Failed to load districts");
@@ -38,7 +40,7 @@ const Signup = () => {
   // Fetch Constituencies when District is Selected
   const fetchConstituencies = async (districtId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/constituencies?district=${districtId}`);
+      const response = await axios.get(import.meta.env.VITE_API_URL + `/api/constituencies?district=${districtId}`);
       setConstituencies(response.data);
     } catch (error) {
       toast.error("Failed to load constituencies");
@@ -48,7 +50,7 @@ const Signup = () => {
   // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData({ ...formData, [name]: sanitizeInput(value) });
 
     // If district is changed, fetch respective constituencies
     if (name === "district") {
@@ -86,9 +88,16 @@ const Signup = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/user/signup", formData);
+      // Sanitize all formData before sending
+      const sanitizedData = Object.fromEntries(
+        Object.entries(formData).map(([k, v]) => [k, sanitizeInput(v)])
+      );
+      const response = await userApi.post("/user/signup", sanitizedData);
       if (response.status === 201 || response.status === 200) {
         toast.success("Signup Successful!");
+        if (response.data && response.data.user) {
+          localStorage.setItem("user", JSON.stringify(response.data.user));
+        }
         setTimeout(() => navigate("/login"), 2000);
       }
     } catch (error) {
@@ -103,17 +112,21 @@ const Signup = () => {
       animate={{ opacity: 1 }} 
       transition={{ duration: 0.5 }}
     >
-      <ToastContainer position="top-right" autoClose={3000} />
       <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md space-y-6">
         <h2 className="text-2xl font-bold text-center">Sign Up</h2>
         <form onSubmit={handleSignup} className="space-y-4">
-          <input type="text" name="name" placeholder="Name" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
-          <input type="text" name="mobile" placeholder="Mobile" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
-          <input type="text" name="aadharNumber" placeholder="Aadhaar Number" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
-          <input type="number" name="age" placeholder="Age" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="text" name="name" placeholder="Name" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Name" title="Enter your full name" />
+          <input type="text" name="mobile" placeholder="Mobile" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Mobile" title="Enter your 10-digit mobile number" />
+          <input type="text" name="aadharNumber" placeholder="Aadhaar Number" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Aadhaar Number" title="Enter your 12-digit Aadhaar Number" />
+          <input type="number" name="age" placeholder="Age" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Age" title="Enter your age" />
 
           {/* Gender Dropdown */}
-          <select name="gender" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required>
+          <select name="gender" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required
+            aria-label="Gender" title="Select your gender">
             <option value="" hidden>Select Gender</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
@@ -121,7 +134,8 @@ const Signup = () => {
           </select>
 
           {/* District Dropdown */}
-          <select name="district" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required>
+          <select name="district" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required
+            aria-label="District" title="Select your district">
             <option value="" hidden>Select District</option>
             {districts.map((dist) => (
               <option key={dist._id} value={dist.name}>{dist.name}</option>
@@ -129,17 +143,21 @@ const Signup = () => {
           </select>
 
           {/* Constituency Dropdown */}
-          <select name="constituency" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required disabled={!formData.district}>
+          <select name="constituency" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required disabled={!formData.district}
+            aria-label="Constituency" title="Select your constituency">
             <option value="" hidden>Select Constituency</option>
             {constituencies.map((consti) => (
               <option key={consti._id} value={consti.name}>{consti.name}</option>
             ))}
           </select>
 
-          <input type="password" name="password" placeholder="Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
-          <input type="password" name="confirmPassword" placeholder="Confirm Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required />
+          <input type="password" name="password" placeholder="Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Password" title="Enter your password" />
+          <input type="password" name="confirmPassword" placeholder="Confirm Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
+            aria-label="Confirm Password" title="Re-enter your password" />
           
-          <button type="submit" className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200">Sign Up</button>
+          <button type="submit" className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200"
+            aria-label="Sign Up Button" title="Click to sign up">Sign Up</button>
         </form>
 
         <p className="text-center text-gray-400">

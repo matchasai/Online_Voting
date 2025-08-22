@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import electionImage from "../assets/election_img.png"; // Ensure you have this image
+import electionImage from "../assets/election_img.png";
 
 const WhyElections = () => {
   return (
