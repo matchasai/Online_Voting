@@ -88,7 +88,7 @@ export default function AdminVotes() {
     }
     const fetchTopCandidates = async () => {
       try {
-        const res = await axios.get(`\${API_URL}/api/admin/analytics/top-candidates`, {
+        const res = await axios.get(`${API_URL}/api/admin/analytics/top-candidates`, {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true
         });
@@ -114,10 +114,10 @@ export default function AdminVotes() {
     setError("");
     try {
       const [partyRes, districtRes, partyListRes, constituencyRes] = await Promise.all([
-        axios.get(`\${API_URL}/api/votes/parties`, getAuthHeader()),
-        axios.get(`\${API_URL}/api/districts`, getAuthHeader()),
-        axios.get(`\${API_URL}/api/parties`, getAuthHeader()),
-        axios.get(`\${API_URL}/api/constituencies`, getAuthHeader()),
+        axios.get(`${API_URL}/api/votes/parties`, getAuthHeader()),
+        axios.get(`${API_URL}/api/districts`, getAuthHeader()),
+        axios.get(`${API_URL}/api/parties`, getAuthHeader()),
+        axios.get(`${API_URL}/api/constituencies`, getAuthHeader()),
       ]);
       setPartyVotes(partyRes.data.parties || []);
       setDistricts(districtRes.data || []);
@@ -134,7 +134,7 @@ export default function AdminVotes() {
     setLoading(true);
     setError("");
     try {
-      let url = `\${API_URL}/api/candidates?page=${page}&limit=${pageSize}`;
+      let url = `${API_URL}/api/candidates?page=${page}&limit=${pageSize}`;
       if (selectedDistrict) url += `&district=${selectedDistrict}`;
       if (selectedParty) url += `&party=${selectedParty}`;
       if (selectedConstituency) url += `&constituency=${selectedConstituency}`;
@@ -151,11 +151,11 @@ export default function AdminVotes() {
 
   const fetchNotaVotes = async () => {
     if (selectedConstituency) {
-      axios.get(`\${API_URL}/api/constituencies/nota/constituency/${selectedConstituency}`)
+      axios.get(`${API_URL}/api/constituencies/nota/constituency/${selectedConstituency}`)
         .then(res => setNotaVotes(res.data.notaVotes || 0))
         .catch(() => setNotaVotes(0));
     } else if (selectedDistrict) {
-      axios.get(`\${API_URL}/api/constituencies/nota/district/${selectedDistrict}`)
+      axios.get(`${API_URL}/api/constituencies/nota/district/${selectedDistrict}`)
         .then(res => setNotaVotes(res.data.totalNota || 0))
         .catch(() => setNotaVotes(0));
     } else {
@@ -165,11 +165,11 @@ export default function AdminVotes() {
 
   const fetchTurnout = async () => {
     if (selectedConstituency) {
-      axios.get(`\${API_URL}/api/constituencies/turnout/constituency/${selectedConstituency}`)
+      axios.get(`${API_URL}/api/constituencies/turnout/constituency/${selectedConstituency}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else if (selectedDistrict) {
-      axios.get(`\${API_URL}/api/constituencies/turnout/district/${selectedDistrict}`)
+      axios.get(`${API_URL}/api/constituencies/turnout/district/${selectedDistrict}`)
         .then(res => setTurnout(res.data))
         .catch(() => setTurnout({ totalVoters: 0, voted: 0, turnout: 0 }));
     } else {
@@ -205,7 +205,7 @@ export default function AdminVotes() {
     }
     setResetLoading(true);
     try {
-      const res = await axios.put(`\${API_URL}/api/admin/resetallvotes`, {}, getAuthHeader());
+      const res = await axios.put(`${API_URL}/api/admin/resetallvotes`, {}, getAuthHeader());
       toast.success(res.data.message || "All votes reset!");
       fetchAllData();
       fetchCandidateVotes();
@@ -252,7 +252,7 @@ export default function AdminVotes() {
   const exportAllData = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`\${API_URL}/api/candidates?limit=10000`, getAuthHeader());
+      const res = await axios.get(`${API_URL}/api/candidates?limit=10000`, getAuthHeader());
       const allCandidates = res.data.candidates || [];
       const csvData = allCandidates.map((c) => ({
         Candidate: c.name,
