@@ -1,9 +1,10 @@
+import fs from "fs";
 import mongoose from "mongoose";
+import path from "path";
 import Candidate from "../models/Candidate.js";
 import Constituency from "../models/Constituency.js";
 import Party from "../models/Party.js";
 
-// ✅ Add a new candidate (with transaction and uniqueness check)
 export const addCandidate = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -17,7 +18,12 @@ export const addCandidate = async (req, res) => {
       return res.status(400).json({ message: "Candidate image is required" });
     }
 
-    const image = req.file.buffer.toString("base64");
+    // Save file to uploads directory instead of storing base64
+    const fileName = `candidate_${Date.now()}_${req.file.originalname}`;
+    const filePath = path.join("uploads", fileName);
+    
+    fs.writeFileSync(filePath, req.file.buffer);
+    const image = `/uploads/${fileName}`; // Store file path instead of base64
 
     const party = await Party.findById(partyId).session(session);
     if (!party) throw new Error("Party not found");
@@ -47,10 +53,13 @@ export const addCandidate = async (req, res) => {
   }
 };
 
-// ✅ Get all candidates with pagination, search, and filtering
 export const getAllCandidates = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', district: districtId, constituency: constituencyId } = req.query;
+    // Add error handling for missing/invalid district/constituency
+    if (("district" in req.query && !districtId) || ("constituency" in req.query && !constituencyId)) {
+      return res.status(400).json({ message: "District or Constituency parameter is missing or invalid." });
+    }
     const skip = (page - 1) * limit;
 
     let query = {};
@@ -82,7 +91,7 @@ export const getAllCandidates = async (req, res) => {
       .select("+image")
       .populate({
           path: 'party',
-          select: 'name symbol'
+          select: 'name symbol' // Include both party name and symbol
       })
       .populate({
           path: 'constituency',
@@ -110,11 +119,10 @@ export const getAllCandidates = async (req, res) => {
   }
 };
 
-// ✅ Get candidate by ID
 export const getCandidateById = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id)
-      .populate("party", "name")
+      .populate("party", "name symbol")
       .populate("constituency", "name");
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
     res.status(200).json(candidate);
@@ -123,7 +131,6 @@ export const getCandidateById = async (req, res) => {
   }
 };
 
-// ✅ Update a candidate
 export const updateCandidate = async (req, res) => {
   try {
     const { name, partyId, constituencyId } = req.body;
@@ -142,7 +149,19 @@ export const updateCandidate = async (req, res) => {
     }
 
     if (req.file) {
-      updateFields.image = req.file.buffer.toString("base64");
+      // If a new file is uploaded, delete the old one and save the new one
+      const oldCandidate = await Candidate.findById(req.params.id);
+      if (oldCandidate && oldCandidate.image && oldCandidate.image.startsWith("/uploads/")) {
+        const oldFilePath = path.join("uploads", oldCandidate.image.split("/uploads/")[1]);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+      
+      const fileName = `candidate_${Date.now()}_${req.file.originalname}`;
+      const filePath = path.join("uploads", fileName);
+      fs.writeFileSync(filePath, req.file.buffer);
+      updateFields.image = `/uploads/${fileName}`;
     }
 
     const updatedCandidate = await Candidate.findByIdAndUpdate(req.params.id, updateFields, { new: true });
@@ -154,7 +173,6 @@ export const updateCandidate = async (req, res) => {
   }
 };
 
-// ✅ Remove a candidate (with transaction)
 export const removeCandidate = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -176,7 +194,6 @@ export const removeCandidate = async (req, res) => {
   }
 };
 
-// ✅ Increment Candidate Votes
 export const incrementVote = async (req, res) => {
   try {
     const candidate = await Candidate.findByIdAndUpdate(req.params.id, { $inc: { votes: 1 } }, { new: true });

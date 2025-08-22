@@ -1,4 +1,7 @@
+import fs from "fs";
 import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 import Candidate from "../models/Candidate.js";
 import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
@@ -13,6 +16,81 @@ export const getAllPartyVotes = async (req, res) => {
     res.status(200).json({ message: "Votes fetched successfully", parties });
   } catch (error) {
     res.status(500).json({ message: "Error fetching votes", error: error.message });
+  }
+};
+
+// Get votes by district (public endpoint for results)
+export const getVotesByDistrict = async (req, res) => {
+  try {
+    const { districtId } = req.params;
+
+    // Validate District
+    const district = await District.findById(districtId);
+    if (!district) {
+      return res.status(404).json({ message: "District not found" });
+    }
+
+    // Find all candidates in the district with their votes
+    const candidates = await Candidate.find({ 
+      constituency: { $in: district.constituencies } 
+    })
+    .populate("party", "name symbol") // Include both party name and symbol
+    .populate("constituency", "name")
+    .select("name votes party constituency");
+
+    if (!candidates.length) {
+      return res.status(404).json({ message: "No candidates found in this district" });
+    }
+
+    // Format response
+    const candidateVotes = candidates.map((candidate) => ({
+      _id: candidate._id,
+      candidateName: candidate.name,
+      party: candidate.party?.name || "Independent",
+      partySymbol: candidate.party?.symbol || null,
+      constituency: candidate.constituency?.name || "Unknown",
+      votes: candidate.votes || 0,
+    }));
+
+    res.status(200).json({ 
+      message: "District votes fetched successfully", 
+      candidates: candidateVotes 
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching district votes", error: error.message });
+  }
+};
+
+// Get top candidates (public endpoint for results)
+export const getTopCandidates = async (req, res) => {
+  try {
+    // Find all candidates with their votes, sorted by votes descending
+    const candidates = await Candidate.find()
+      .populate("party", "name symbol") // Include party name and symbol
+      .populate("constituency", "name")
+      .select("name votes party constituency")
+      .sort({ votes: -1 })
+      .limit(25);
+
+    if (!candidates.length) {
+      return res.status(404).json({ message: "No candidates found" });
+    }
+
+    // Format response
+    const topCandidates = candidates.map((candidate) => ({
+      candidateName: candidate.name,
+      party: candidate.party?.name || "Independent",
+      partySymbol: candidate.party?.symbol || null,
+      constituency: candidate.constituency?.name || "Unknown",
+      votes: candidate.votes || 0,
+    }));
+
+    res.status(200).json({ 
+      message: "Top candidates fetched successfully", 
+      topCandidates 
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching top candidates", error: error.message });
   }
 };
 
@@ -73,6 +151,24 @@ export const castVote = async (req, res) => {
   const { candidateId, constituencyId, isNota } = req.body;
   const userId = req.user.id;
 
+  // 0. Check if voting has started
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const DATA_FILE = path.join(__dirname, "../../votingStart.json");
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE));
+      if (data.date && data.time) {
+        const votingStart = new Date(`${data.date}T${data.time}`);
+        if (new Date() < votingStart) {
+          return res.status(403).json({ message: "Voting has not started yet." });
+        }
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to check voting start time." });
+  }
+
   // 1. Validate all inputs
   if (!userId) {
     return res.status(401).json({ message: "Not authorized. User ID is missing." });
@@ -116,7 +212,6 @@ export const castVote = async (req, res) => {
     res.status(200).json({ message: "Vote cast successfully." });
 
   } catch (error) {
-    console.error("VOTE CASTING FAILED:", error);
     res.status(500).json({ message: "A critical server error occurred. Please try again.", error: error.message });
   }
 };

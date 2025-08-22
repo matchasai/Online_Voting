@@ -30,8 +30,6 @@ const adminAuth = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error("❌ JWT Verification Error:", error.message);
-
     if (error.name === "JsonWebTokenError") {
       return res.status(400).json({ message: "Invalid Token. Please provide a valid token." });
     } else if (error.name === "TokenExpiredError") {

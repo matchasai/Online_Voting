@@ -2,7 +2,6 @@ import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
 import User from "../models/User.js";
 
-// ✅ Add a new constituency
 export const addConstituency = async (req, res) => {
   try {
     const { name, districtId } = req.body;
@@ -41,7 +40,6 @@ export const addConstituency = async (req, res) => {
   }
 };
 
-// ✅ Get constituencies with pagination, search, and filtering
 export const getAllConstituencies = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', district: districtId } = req.query;
@@ -75,12 +73,14 @@ export const getAllConstituencies = async (req, res) => {
   }
 };
 
-// ✅ Get a single constituency by ID
 export const getConstituencyById = async (req, res) => {
   try {
     const constituency = await Constituency.findById(req.params.id)
       .populate("district", "name")
-      .populate("candidates", "name party");
+      .populate({
+        path: "candidates",
+        populate: { path: "party", select: "name symbol" } // Include both party name and symbol
+      });
 
     if (!constituency) {
       return res.status(404).json({ message: "Constituency not found" });
@@ -92,7 +92,6 @@ export const getConstituencyById = async (req, res) => {
   }
 };
 
-// ✅ Update a constituency (update district reference if changed)
 export const updateConstituency = async (req, res) => {
   try {
     const { name, districtId } = req.body;
@@ -134,7 +133,6 @@ export const updateConstituency = async (req, res) => {
   }
 };
 
-// ✅ Delete a constituency
 export const deleteConstituency = async (req, res) => {
   try {
     const { id } = req.params;

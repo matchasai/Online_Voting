@@ -13,11 +13,11 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true, select: false },
     hasVoted: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
+    refreshToken: { type: String, default: null },
   },
   { timestamps: true }
 );
 
-// ✅ Hash password before saving
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);

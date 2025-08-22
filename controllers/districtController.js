@@ -1,7 +1,6 @@
 import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
 
-// ✅ Add a new district
 export const addDistrict = async (req, res) => {
   try {
     const { name, state } = req.body;
@@ -27,7 +26,6 @@ export const addDistrict = async (req, res) => {
   }
 };
 
-// ✅ Get all districts with search
 export const getAllDistricts = async (req, res) => {
   try {
     const { search = '' } = req.query;
@@ -48,7 +46,6 @@ export const getAllDistricts = async (req, res) => {
   }
 };
 
-// ✅ Get district by ID
 export const getDistrictById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -66,7 +63,6 @@ export const getDistrictById = async (req, res) => {
   }
 };
 
-// ✅ Update a district
 export const updateDistrict = async (req, res) => {
   try {
     const { id } = req.params;
@@ -96,7 +92,6 @@ export const updateDistrict = async (req, res) => {
   }
 };
 
-// ✅ Delete a district
 export const removeDistrict = async (req, res) => {
   try {
     const { id } = req.params;

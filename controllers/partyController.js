@@ -2,15 +2,13 @@ import mongoose from "mongoose";
 import Party from "../models/Party.js";
 
 
-// ✅ Utility function for standardized responses
 const handleResponse = (res, status, message, data = null) => {
   return res.status(status).json({
     success: status >= 200 && status < 300,
     message,
-    data: Array.isArray(data) ? data : [] // Ensure data is always an array
+    data: Array.isArray(data) ? data : []
   });
 };
-// ✅ Create a new party (Now storing image in MongoDB as Base64)
 export const createParty = async (req, res) => {
   try {
     const { name, manifesto, founder, foundedYear, ideology } = req.body;
@@ -32,7 +30,6 @@ export const createParty = async (req, res) => {
   }
 };
 
-// ✅ Get all parties with pagination and search
 export const getParties = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '' } = req.query;
@@ -68,7 +65,6 @@ export const getParties = async (req, res) => {
   }
 };
 
-// ✅ Get a party by ID
 export const getPartyById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -84,7 +80,6 @@ export const getPartyById = async (req, res) => {
   }
 };
 
-// ✅ Update a party
 export const updateParty = async (req, res) => {
   try {
     const { id } = req.params;
@@ -111,7 +106,6 @@ export const updateParty = async (req, res) => {
   }
 };
 
-// ✅ Delete a party
 export const deleteParty = async (req, res) => {
   try {
     const { id } = req.params;

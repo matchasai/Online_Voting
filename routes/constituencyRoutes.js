@@ -6,16 +6,15 @@ import {
     getConstituencyById,
     getNotaVotesByConstituency,
     getNotaVotesByDistrict,
+    getOverallTurnout,
     getTotalNotaVotes,
     getTurnoutByConstituency,
     getTurnoutByDistrict,
-    getOverallTurnout,
     updateConstituency
 } from "../controllers/constituencyController.js";
 
 const router = express.Router();
 
-// ✅ API Routes for Constituencies
 router.post("/add", addConstituency);
 router.get("/", getAllConstituencies);
 router.get("/:id", getConstituencyById);

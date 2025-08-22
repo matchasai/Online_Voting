@@ -6,6 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 
+import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 import adminRoutes from "./routes/adminRoutes.js";
 import candidateRoutes from "./routes/candidateRoutes.js";
 import constituencyRoutes from "./routes/constituencyRoutes.js"; // ✅ Fixed import name
@@ -26,13 +28,17 @@ const __dirname = path.dirname(__filename);
 const uploadsPath = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
-  console.log(" Created 'uploads' directory.");
 }
 
 // ✅ Serve static files correctly
 app.use("/uploads", express.static(uploadsPath));
 
-app.use(express.json());
+// ✅ Increase header size limits to handle larger headers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// ✅ Configure CORS with larger header limits
 app.use(
   cors({
     origin: ["http://localhost:5173",
@@ -42,6 +48,7 @@ app.use(
     credentials: true, 
     methods: "GET, POST, PUT, DELETE",
     allowedHeaders: "Content-Type, Authorization",
+    maxAge: 86400, // 24 hours
   })
 );
 
@@ -119,8 +126,23 @@ app.post("/api/results/time", (req, res) => {
   }
 });
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: 'Too many login attempts, please try again later.'
+});
+
+const voteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // limit each IP to 30 votes per windowMs
+  message: 'Too many voting attempts, please try again later.'
+});
+
+app.use('/api/user/login', loginLimiter);
+app.use('/api/votes/cast', voteLimiter);
+
 // ✅ Start the Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(` Server running on http://localhost:${PORT}`);
+  // Server started successfully
 });

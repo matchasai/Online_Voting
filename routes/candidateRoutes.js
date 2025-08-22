@@ -16,6 +16,6 @@ router.get("/", getAllCandidates);
 router.get("/:id", getCandidateById);
 router.put("/:id", uploadMiddleware("image"), updateCandidate);
 router.delete("/:id", removeCandidate);
-router.post("/:id/vote", incrementVote);  // ✅ New route for voting
+router.post("/:id/vote", incrementVote);
 
 export default router;

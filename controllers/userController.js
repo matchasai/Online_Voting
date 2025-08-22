@@ -14,23 +14,39 @@ export const getUserByAadhar = async (req, res) => {
         if (!aadharNumber) {
             return res.status(400).json({ message: "Aadhar number is required" });
         }
-        const user = await User.findOne({ aadharNumber }).select("name");
+        // Populate district and constituency
+        const user = await User.findOne({ aadharNumber })
+            .populate("district", "_id name")
+            .populate("constituency", "_id name")
+            .select("name district constituency");
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-        res.status(200).json(user);
+        res.status(200).json({
+            name: user.name,
+            district: user.district?._id || null,
+            districtName: user.district?.name || null,
+            constituency: user.constituency?._id || null,
+            constituencyName: user.constituency?.name || null
+        });
     } catch (error) {
         console.error("Error fetching user by aadhar:", error);
         res.status(500).json({ message: "Server Error" });
     }
 };
 
-// ✅ Generate JWT Token
-const generateToken = (user) => {
+const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user._id, isAdmin: user.isAdmin },
         process.env.JWT_SECRET,
-        { expiresIn: "12h" }
+        { expiresIn: "15m" }
+    );
+};
+const generateRefreshToken = (user) => {
+    return jwt.sign(
+        { id: user._id, isAdmin: user.isAdmin },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
     );
 };
 
@@ -96,12 +112,12 @@ export const signup = async (req, res) => {
         });
 
         await user.save();
-        const token = generateToken(user);
+        const token = generateAccessToken(user);
 
         res.status(201).json({ message: "User registered successfully", token });
     } catch (error) {
         console.error("Signup Error:", error);
-        res.status(500).json({ message: "Server Error", error: error.message });
+        res.status(500).json({ message: "Server Error. Please try again later.", error: error.message });
     }
 };
 
@@ -109,31 +125,81 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { aadharNumber, password } = req.body;
-
-        // Validate required fields
         if (!aadharNumber || !password) {
-            return res.status(400).json({ message: "Please provide both Aadhar and password" });
+            return res.status(400).json({ message: "Please provide both Aadhar and password." });
         }
-
-        // Check if user exists
         const user = await User.findOne({ aadharNumber }).select("+password name");
         if (!user) {
-            return res.status(400).json({ message: "Aadhar Number not registered" });
+            return res.status(400).json({ message: "Aadhar Number not registered." });
         }
-
-        // Validate password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: "Invalid credentials" });
+            return res.status(400).json({ message: "Invalid credentials." });
         }
-
-        // Generate token
-        const token = generateToken(user);
-        res.status(200).json({ message: "Login successful", token, username: user.name });
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+        user.refreshToken = refreshToken;
+        await user.save();
+        res.cookie("userRefreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+        res.status(200).json({ message: "Login successful", token: accessToken, username: user.name });
     } catch (error) {
         console.error("Login Error:", error);
-        res.status(500).json({ message: "Server Error", error: error.message });
+        res.status(500).json({ message: "Server Error. Please try again later.", error: error.message });
     }
+};
+
+export const userRefreshToken = async (req, res) => {
+    const refreshToken = req.cookies.userRefreshToken;
+    if (!refreshToken) {
+        return res.status(401).json({ message: "No refresh token provided" });
+    }
+    // Find user with this refresh token
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+        return res.status(403).json({ message: "Invalid refresh token" });
+    }
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        // ROTATE refresh token
+        const newRefreshToken = generateRefreshToken(user);
+        user.refreshToken = newRefreshToken;
+        await user.save();
+        res.cookie("userRefreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+        const newAccessToken = jwt.sign(
+            { id: decoded.id, isAdmin: decoded.isAdmin },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        );
+        return res.status(200).json({ token: newAccessToken });
+    } catch (error) {
+        user.refreshToken = null;
+        await user.save();
+        return res.status(401).json({ message: "Refresh token expired. Please log in again." });
+    }
+};
+
+// ✅ Logout Endpoint
+export const logout = async (req, res) => {
+    const refreshToken = req.cookies.userRefreshToken;
+    if (refreshToken) {
+        const user = await User.findOne({ refreshToken });
+        if (user) {
+            user.refreshToken = null;
+            await user.save();
+        }
+    }
+    res.clearCookie("userRefreshToken");
+    res.status(200).json({ message: "Logged out successfully." });
 };
 
 // ✅ Get User Details by ID
