@@ -7,6 +7,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { sanitizeInput } from "../utils/sanitizeInput";
 import userApi from "../utils/userApi";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const Signup = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -28,7 +30,7 @@ const Signup = () => {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const response = await axios.get(import.meta.env.VITE_API_URL + "/api/districts");
+        const response = await axios.get(`${API_URL}/api/districts`);
         setDistricts(response.data);
       } catch (error) {
         toast.error("Failed to load districts");
@@ -40,7 +42,7 @@ const Signup = () => {
   // Fetch Constituencies when District is Selected
   const fetchConstituencies = async (districtId) => {
     try {
-      const response = await axios.get(import.meta.env.VITE_API_URL + `/api/constituencies?district=${districtId}`);
+      const response = await axios.get(`${API_URL}/api/constituencies?district=${districtId}`);
       setConstituencies(response.data);
     } catch (error) {
       toast.error("Failed to load constituencies");

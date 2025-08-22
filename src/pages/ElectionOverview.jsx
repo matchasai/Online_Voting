@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
 const SKELETON_COUNT = 3;
 
 const ElectionOverview = () => {
@@ -28,7 +29,7 @@ const ElectionOverview = () => {
   const fetchDistricts = () => {
     setLoading(true);
     setError("");
-    fetch(import.meta.env.VITE_API_URL + "/api/districts")
+    fetch(`${API_URL}/api/districts`)
       .then((res) => res.json())
       .then((data) => {
         // Ensure districts is an array and each district has the expected structure
@@ -77,7 +78,7 @@ const ElectionOverview = () => {
       ...prev,
       [constituencyId]: { loading: true, error: "", candidates: [] },
     }));
-    fetch(import.meta.env.VITE_API_URL + `/api/constituencies/${constituencyId}`)
+    fetch(`${API_URL}/api/constituencies/${constituencyId}`)
       .then((res) => res.json())
       .then((data) => {
         // Ensure candidates is an array and each candidate has the expected structure
@@ -197,7 +198,7 @@ const ElectionOverview = () => {
     
     // Handle file paths (new format)
     if (party.symbol.startsWith("/uploads/")) {
-      const url = `${import.meta.env.VITE_API_URL}${party.symbol}`;
+      const url = `${API_URL}${party.symbol}`;
       return url;
     }
     

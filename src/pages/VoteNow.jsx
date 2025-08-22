@@ -3,6 +3,8 @@ import { useContext, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { UserContext } from "../App";
 
+const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onrender.com";
+
 const getUserAuthHeader = () => {
   const token = localStorage.getItem("userToken");
   return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
@@ -25,7 +27,7 @@ const VoteNow = () => {
   useEffect(() => {
     const checkVotingStart = async () => {
       try {
-        const res = await fetch(import.meta.env.VITE_API_URL + "/api/voting/start");
+        const res = await fetch(`${API_URL}/api/voting/start`);
         const data = await res.json();
         if (data.date && data.time) {
           const votingStart = new Date(`${data.date}T${data.time}`);
@@ -60,7 +62,7 @@ const VoteNow = () => {
             return;
           }
           const response = await axios.get(
-            import.meta.env.VITE_API_URL + `/api/candidates?district=${propUser.district}&constituency=${propUser.constituency}`,
+            `${API_URL}/api/candidates?district=${propUser.district}&constituency=${propUser.constituency}`,
             getUserAuthHeader()
           );
           setCandidates(Array.isArray(response.data.candidates) ? response.data.candidates : []);
@@ -121,7 +123,7 @@ const VoteNow = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const response = await axios.post(import.meta.env.VITE_API_URL + "/api/votes/cast", {
+          const response = await axios.post(`${API_URL}/api/votes/cast`, {
             isNota: isNota,
             candidateId: isNota ? null : party._id,
             constituencyId: user.constituency
