@@ -31,9 +31,14 @@ const Signup = () => {
     const fetchDistricts = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/districts`);
-        setDistricts(response.data);
+        // Districts API returns array directly
+        const data = response.data;
+        console.log("Districts response:", data); // Debug log
+        setDistricts(Array.isArray(data) ? data : []);
       } catch (error) {
+        console.error("Error fetching districts:", error);
         toast.error("Failed to load districts");
+        setDistricts([]);
       }
     };
     fetchDistricts();
@@ -43,9 +48,14 @@ const Signup = () => {
   const fetchConstituencies = async (districtId) => {
     try {
       const response = await axios.get(`${API_URL}/api/constituencies?district=${districtId}`);
-      setConstituencies(response.data);
+      // The API returns { constituencies: [...], totalPages: ..., etc }
+      const data = response.data;
+      console.log("Constituencies response:", data); // Debug log
+      setConstituencies(Array.isArray(data.constituencies) ? data.constituencies : []);
     } catch (error) {
+      console.error("Error fetching constituencies:", error);
       toast.error("Failed to load constituencies");
+      setConstituencies([]);
     }
   };
 
@@ -55,7 +65,7 @@ const Signup = () => {
     setFormData({ ...formData, [name]: sanitizeInput(value) });
 
     // If district is changed, fetch respective constituencies
-    if (name === "district") {
+    if (name === "district" && Array.isArray(districts)) {
       const selectedDistrict = districts.find((dist) => dist.name === value);
       if (selectedDistrict) {
         fetchConstituencies(selectedDistrict._id); // Fetch constituencies for selected district
@@ -139,7 +149,9 @@ const Signup = () => {
           <select name="district" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required
             aria-label="District" title="Select your district">
             <option value="" hidden>Select District</option>
-            {Array.isArray(districts) ? districts.map((dist) => (
+            {Array.isArray(districts) ? districts
+              .filter(dist => dist && dist._id && dist.name)
+              .map((dist) => (
               <option key={dist._id} value={dist.name}>{dist.name}</option>
             )) : null}
           </select>
@@ -148,7 +160,9 @@ const Signup = () => {
           <select name="constituency" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required disabled={!formData.district}
             aria-label="Constituency" title="Select your constituency">
             <option value="" hidden>Select Constituency</option>
-            {Array.isArray(constituencies) ? constituencies.map((consti) => (
+            {Array.isArray(constituencies) ? constituencies
+              .filter(consti => consti && consti._id && consti.name)
+              .map((consti) => (
               <option key={consti._id} value={consti.name}>{consti.name}</option>
             )) : null}
           </select>
