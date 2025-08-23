@@ -139,18 +139,18 @@ const Signup = () => {
           <select name="district" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required
             aria-label="District" title="Select your district">
             <option value="" hidden>Select District</option>
-            {districts.map((dist) => (
+            {Array.isArray(districts) ? districts.map((dist) => (
               <option key={dist._id} value={dist.name}>{dist.name}</option>
-            ))}
+            )) : null}
           </select>
 
           {/* Constituency Dropdown */}
           <select name="constituency" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required disabled={!formData.district}
             aria-label="Constituency" title="Select your constituency">
             <option value="" hidden>Select Constituency</option>
-            {constituencies.map((consti) => (
+            {Array.isArray(constituencies) ? constituencies.map((consti) => (
               <option key={consti._id} value={consti.name}>{consti.name}</option>
-            ))}
+            )) : null}
           </select>
 
           <input type="password" name="password" placeholder="Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 

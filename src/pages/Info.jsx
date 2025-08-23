@@ -79,9 +79,9 @@ const InfoSection = () => {
         <div className="text-center text-red-400 text-lg" role="alert">{error}</div>
       ) : (
         <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-8">
-          {parties
+          {Array.isArray(parties) ? parties
             .filter((party) =>
-              party.name.toLowerCase().includes(search.toLowerCase())
+              party && party.name && party.name.toLowerCase().includes(search.toLowerCase())
             )
             .map((party, index) => (
               <motion.div
@@ -115,7 +115,7 @@ const InfoSection = () => {
                   <strong>Manifesto:</strong> {party.manifesto}
                 </p>
               </motion.div>
-            ))}
+            )) : []}
         </div>
       )}
     </div>

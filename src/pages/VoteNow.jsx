@@ -207,7 +207,7 @@ const VoteNow = () => {
             </div>
           ) : (
             <div className="space-y-6 flex flex-col">
-              {candidates.length > 0 ? candidates.map((candidate) => (
+              {Array.isArray(candidates) && candidates.length > 0 ? candidates.map((candidate) => (
                 <div
                   key={candidate._id}
                   className="flex items-center justify-between bg-gray-700 p-5 rounded-xl border-2 border-gray-600 shadow-md hover:shadow-lg transition-shadow duration-200"

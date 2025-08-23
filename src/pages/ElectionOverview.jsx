@@ -137,15 +137,15 @@ const ElectionOverview = () => {
   };
 
   // Filter districts/constituencies by search
-  const filteredDistricts = districts.map((district) => {
-    let filteredConstituencies = district.constituencies;
+  const filteredDistricts = Array.isArray(districts) ? districts.map((district) => {
+    let filteredConstituencies = Array.isArray(district.constituencies) ? district.constituencies : [];
     if (constituencySearch.trim()) {
       filteredConstituencies = filteredConstituencies.filter((c) =>
-        c.name.toLowerCase().includes(constituencySearch.toLowerCase())
+        c && c.name && c.name.toLowerCase().includes(constituencySearch.toLowerCase())
       );
     }
     return { ...district, constituencies: filteredConstituencies };
-  });
+  }) : [];
 
   // Loading skeletons
   if (loading) {
