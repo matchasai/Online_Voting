@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: deshkavote-admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
