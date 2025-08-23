@@ -1,14 +1,17 @@
 import express from "express";
 import { check } from "express-validator";
 import {
+    forgotPassword,
     getUserByAadhar,
     getUserDetails,
     getUserProfile,
     login,
     logout,
     resetAllVotes,
+    resetPassword,
     signup,
-    userRefreshToken
+    userRefreshToken,
+    verifyOTP
 } from "../controllers/userController.js";
 import { authMiddleware, protect } from "../middleware/authMiddleware.js";
 
@@ -39,6 +42,22 @@ router.post(
 );
 router.post("/get-by-aadhar", getUserByAadhar);
 router.get("/getUser/:id", authMiddleware, getUserDetails);
+
+// Forgot Password Routes
+router.post("/forgot-password", [
+  check("mobile").isNumeric().isLength({ min: 10, max: 10 })
+], forgotPassword);
+
+router.post("/verify-otp", [
+  check("mobile").isNumeric().isLength({ min: 10, max: 10 }),
+  check("otp").isNumeric().isLength({ min: 6, max: 6 })
+], verifyOTP);
+
+router.post("/reset-password", [
+  check("mobile").isNumeric().isLength({ min: 10, max: 10 }),
+  check("otp").isNumeric().isLength({ min: 6, max: 6 }),
+  check("newPassword").isStrongPassword({ minLength: 6, minUppercase: 1, minNumbers: 1, minSymbols: 1 })
+], resetPassword);
 
 router.get("/profile", protect, getUserProfile);
 

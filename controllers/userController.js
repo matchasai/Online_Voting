@@ -4,8 +4,10 @@ import validator from "validator";
 import Candidate from "../models/Candidate.js";
 import Constituency from "../models/Constituency.js";
 import District from "../models/District.js";
+import OTP from "../models/OTP.js";
 import Party from "../models/Party.js";
 import User from "../models/User.js";
+import { sendOTP } from "../services/smsService.js";
 
 // ✅ Get User by Aadhar Number (New)
 export const getUserByAadhar = async (req, res) => {
@@ -282,5 +284,148 @@ export const resetAllVotes = async (req, res) => {
     res.status(200).json({ message: 'All votes have been reset.' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to reset votes.', error: error.message });
+  }
+};
+
+// Forgot Password - Send OTP
+export const forgotPassword = async (req, res) => {
+  try {
+    const { mobileNumber } = req.body;
+
+    // Validate mobile number
+    if (!mobileNumber) {
+      return res.status(400).json({ message: "Mobile number is required." });
+    }
+
+    // Check if mobile number is valid (10 digits)
+    if (!/^\d{10}$/.test(mobileNumber)) {
+      return res.status(400).json({ message: "Please enter a valid 10-digit mobile number." });
+    }
+
+    // Check if user exists with this mobile number
+    const user = await User.findOne({ mobileNumber });
+    if (!user) {
+      return res.status(404).json({ message: "No user found with this mobile number." });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Delete any existing OTPs for this mobile number
+    await OTP.deleteMany({ mobileNumber });
+
+    // Save OTP to database
+    const otpDoc = new OTP({
+      mobileNumber,
+      otp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+    await otpDoc.save();
+
+    // Send OTP via SMS
+    const smsResult = await sendOTP(mobileNumber, otp);
+    
+    if (smsResult.success) {
+      res.status(200).json({ 
+        message: "OTP sent successfully to your mobile number.",
+        mobileNumber: mobileNumber 
+      });
+    } else {
+      // Delete the OTP if SMS failed
+      await OTP.deleteOne({ _id: otpDoc._id });
+      res.status(500).json({ message: "Failed to send OTP. Please try again." });
+    }
+
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// Verify OTP
+export const verifyOTP = async (req, res) => {
+  try {
+    const { mobileNumber, otp } = req.body;
+
+    // Validate input
+    if (!mobileNumber || !otp) {
+      return res.status(400).json({ message: "Mobile number and OTP are required." });
+    }
+
+    // Find OTP in database
+    const otpDoc = await OTP.findOne({ 
+      mobileNumber, 
+      otp,
+      expiresAt: { $gt: new Date() } // Check if not expired
+    });
+
+    if (!otpDoc) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    // Mark OTP as verified
+    otpDoc.isVerified = true;
+    await otpDoc.save();
+
+    res.status(200).json({ 
+      message: "OTP verified successfully.",
+      mobileNumber: mobileNumber 
+    });
+
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+  try {
+    const { mobileNumber, otp, newPassword } = req.body;
+
+    // Validate input
+    if (!mobileNumber || !otp || !newPassword) {
+      return res.status(400).json({ message: "Mobile number, OTP, and new password are required." });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long." });
+    }
+
+    // Find verified OTP
+    const otpDoc = await OTP.findOne({ 
+      mobileNumber, 
+      otp,
+      isVerified: true,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!otpDoc) {
+      return res.status(400).json({ message: "Invalid or expired OTP. Please request a new one." });
+    }
+
+    // Find user
+    const user = await User.findOne({ mobileNumber });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update user password
+    user.password = hashedPassword;
+    await user.save();
+
+    // Delete the used OTP
+    await OTP.deleteOne({ _id: otpDoc._id });
+
+    res.status(200).json({ message: "Password reset successfully. You can now login with your new password." });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Internal server error." });
   }
 };
