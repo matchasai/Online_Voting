@@ -10,6 +10,7 @@ import Navbar2 from "./components/Navbar2";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ElectionOverview from "./pages/ElectionOverview";
+import ForgotPassword from "./pages/ForgotPassword";
 import Home from "./pages/Home";
 import Info from "./pages/Info";
 import Login from "./pages/Login";
@@ -83,6 +84,7 @@ const App = () => {
             <Route path="/" element={user ? <Navigate to="/home" replace /> : <Home />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/info" element={<Info />} />
