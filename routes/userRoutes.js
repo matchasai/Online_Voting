@@ -1,17 +1,17 @@
 import express from "express";
 import { check } from "express-validator";
 import {
-    forgotPassword,
-    getUserByAadhar,
-    getUserDetails,
-    getUserProfile,
-    login,
-    logout,
-    resetAllVotes,
-    resetPassword,
-    signup,
-    userRefreshToken,
-    verifyOTP
+  forgotPassword,
+  getUserByAadhar,
+  getUserDetails,
+  getUserProfile,
+  login,
+  logout,
+  resetAllVotes,
+  resetPassword,
+  signup,
+  userRefreshToken,
+  verifyOTP
 } from "../controllers/userController.js";
 import { authMiddleware, protect } from "../middleware/authMiddleware.js";
 

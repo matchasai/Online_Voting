@@ -290,20 +290,20 @@ export const resetAllVotes = async (req, res) => {
 // Forgot Password - Send OTP
 export const forgotPassword = async (req, res) => {
   try {
-    const { mobileNumber } = req.body;
+    const { mobile } = req.body;
 
     // Validate mobile number
-    if (!mobileNumber) {
+    if (!mobile) {
       return res.status(400).json({ message: "Mobile number is required." });
     }
 
     // Check if mobile number is valid (10 digits)
-    if (!/^\d{10}$/.test(mobileNumber)) {
+    if (!/^\d{10}$/.test(mobile)) {
       return res.status(400).json({ message: "Please enter a valid 10-digit mobile number." });
     }
 
     // Check if user exists with this mobile number
-    const user = await User.findOne({ mobileNumber });
+    const user = await User.findOne({ mobile });
     if (!user) {
       return res.status(404).json({ message: "No user found with this mobile number." });
     }
@@ -312,28 +312,29 @@ export const forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Delete any existing OTPs for this mobile number
-    await OTP.deleteMany({ mobileNumber });
+    await OTP.deleteMany({ mobileNumber: mobile });
 
     // Save OTP to database
     const otpDoc = new OTP({
-      mobileNumber,
+      mobileNumber: mobile,
       otp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
     await otpDoc.save();
 
     // Send OTP via SMS
-    const smsResult = await sendOTP(mobileNumber, otp);
+    const smsResult = await sendOTP(mobile, otp);
     
     if (smsResult.success) {
       res.status(200).json({ 
+        success: true,
         message: "OTP sent successfully to your mobile number.",
-        mobileNumber: mobileNumber 
+        mobileNumber: mobile 
       });
     } else {
       // Delete the OTP if SMS failed
       await OTP.deleteOne({ _id: otpDoc._id });
-      res.status(500).json({ message: "Failed to send OTP. Please try again." });
+      res.status(500).json({ success: false, message: "Failed to send OTP. Please try again." });
     }
 
   } catch (error) {
@@ -345,16 +346,16 @@ export const forgotPassword = async (req, res) => {
 // Verify OTP
 export const verifyOTP = async (req, res) => {
   try {
-    const { mobileNumber, otp } = req.body;
+    const { mobile, otp } = req.body;
 
     // Validate input
-    if (!mobileNumber || !otp) {
+    if (!mobile || !otp) {
       return res.status(400).json({ message: "Mobile number and OTP are required." });
     }
 
     // Find OTP in database
     const otpDoc = await OTP.findOne({ 
-      mobileNumber, 
+      mobileNumber: mobile, 
       otp,
       expiresAt: { $gt: new Date() } // Check if not expired
     });
@@ -368,8 +369,9 @@ export const verifyOTP = async (req, res) => {
     await otpDoc.save();
 
     res.status(200).json({ 
+      success: true,
       message: "OTP verified successfully.",
-      mobileNumber: mobileNumber 
+      mobileNumber: mobile 
     });
 
   } catch (error) {
@@ -381,10 +383,10 @@ export const verifyOTP = async (req, res) => {
 // Reset Password
 export const resetPassword = async (req, res) => {
   try {
-    const { mobileNumber, otp, newPassword } = req.body;
+    const { mobile, otp, newPassword } = req.body;
 
     // Validate input
-    if (!mobileNumber || !otp || !newPassword) {
+    if (!mobile || !otp || !newPassword) {
       return res.status(400).json({ message: "Mobile number, OTP, and new password are required." });
     }
 
@@ -395,7 +397,7 @@ export const resetPassword = async (req, res) => {
 
     // Find verified OTP
     const otpDoc = await OTP.findOne({ 
-      mobileNumber, 
+      mobileNumber: mobile, 
       otp,
       isVerified: true,
       expiresAt: { $gt: new Date() }
@@ -406,7 +408,7 @@ export const resetPassword = async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ mobileNumber });
+    const user = await User.findOne({ mobile });
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
@@ -422,7 +424,7 @@ export const resetPassword = async (req, res) => {
     // Delete the used OTP
     await OTP.deleteOne({ _id: otpDoc._id });
 
-    res.status(200).json({ message: "Password reset successfully. You can now login with your new password." });
+    res.status(200).json({ success: true, message: "Password reset successfully. You can now login with your new password." });
 
   } catch (error) {
     console.error("Reset password error:", error);
