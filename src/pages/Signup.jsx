@@ -33,7 +33,6 @@ const Signup = () => {
         const response = await axios.get(`${API_URL}/api/districts`);
         // Districts API returns array directly
         const data = response.data;
-        console.log("Districts response:", data); // Debug log
         setDistricts(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching districts:", error);
@@ -50,7 +49,6 @@ const Signup = () => {
       const response = await axios.get(`${API_URL}/api/constituencies?district=${districtId}`);
       // The API returns { constituencies: [...], totalPages: ..., etc }
       const data = response.data;
-      console.log("Constituencies response:", data); // Debug log
       setConstituencies(Array.isArray(data.constituencies) ? data.constituencies : []);
     } catch (error) {
       console.error("Error fetching constituencies:", error);
@@ -78,22 +76,52 @@ const Signup = () => {
   const handleSignup = async (e) => {
     e.preventDefault();
 
+    // Enhanced validation to match backend requirements
+    if (!formData.name || !formData.aadharNumber || !formData.mobile || !formData.age || 
+        !formData.gender || !formData.district || !formData.constituency || 
+        !formData.password || !formData.confirmPassword) {
+      toast.error("All fields are required");
+      return;
+    }
+
     if (parseInt(formData.age) < 18) {
       toast.error("You must be at least 18 years old to register.");
       return;
     }
+
+    if (formData.aadharNumber.length !== 12 || !/^\d{12}$/.test(formData.aadharNumber)) {
+      toast.error("Aadhar Number must be exactly 12 digits");
+      return;
+    }
+
+    if (formData.mobile.length !== 10 || !/^\d{10}$/.test(formData.mobile)) {
+      toast.error("Mobile Number must be exactly 10 digits");
+      return;
+    }
+
+    // Name validation (only alphabets and spaces)
+    if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      toast.error("Name should contain only alphabets and spaces");
+      return;
+    }
+
+    // Strong password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      toast.error("Password must be at least 6 characters with 1 uppercase, 1 number, and 1 special character");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match!");
       return;
     }
-    if (formData.mobile.length !== 10) {
-      toast.error("Enter a valid 10-digit phone number");
-      return;
-    }
+
     if (!formData.gender) {
       toast.error("Please select a gender");
       return;
     }
+
     if (!formData.constituency || !formData.district) {
       toast.error("Please select your constituency and district");
       return;
@@ -104,6 +132,14 @@ const Signup = () => {
       const sanitizedData = Object.fromEntries(
         Object.entries(formData).map(([k, v]) => [k, sanitizeInput(v)])
       );
+      
+      // Debug: Show what's being sent (remove in production)
+      console.log("Sending signup data:", {
+        ...sanitizedData,
+        password: "[HIDDEN]",
+        confirmPassword: "[HIDDEN]"
+      });
+      
       const response = await userApi.post("/user/signup", sanitizedData);
       if (response.status === 201 || response.status === 200) {
         toast.success("Signup Successful!");
@@ -113,7 +149,16 @@ const Signup = () => {
         setTimeout(() => navigate("/login"), 2000);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Signup failed!");
+      console.error("Signup error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.response?.data?.errors?.[0]?.msg || 
+                          "Signup failed!";
+      toast.error(errorMessage);
     }
   };
 
@@ -127,14 +172,53 @@ const Signup = () => {
       <div className="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md space-y-6">
         <h2 className="text-2xl font-bold text-center">Sign Up</h2>
         <form onSubmit={handleSignup} className="space-y-4">
-          <input type="text" name="name" placeholder="Name" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Name" title="Enter your full name" />
-          <input type="text" name="mobile" placeholder="Mobile" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Mobile" title="Enter your 10-digit mobile number" />
-          <input type="text" name="aadharNumber" placeholder="Aadhaar Number" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Aadhaar Number" title="Enter your 12-digit Aadhaar Number" />
-          <input type="number" name="age" placeholder="Age" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Age" title="Enter your age" />
+          <input 
+            type="text" 
+            name="name" 
+            placeholder="Name" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            pattern="[A-Za-z\s]+"
+            title="Enter your full name (alphabets and spaces only)"
+            aria-label="Name" 
+          />
+          <input 
+            type="text" 
+            name="mobile" 
+            placeholder="Mobile Number" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            pattern="\d{10}"
+            maxLength="10"
+            title="Enter your 10-digit mobile number"
+            aria-label="Mobile" 
+          />
+          <input 
+            type="text" 
+            name="aadharNumber" 
+            placeholder="Aadhaar Number" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            pattern="\d{12}"
+            maxLength="12"
+            title="Enter your 12-digit Aadhaar Number"
+            aria-label="Aadhaar Number" 
+          />
+          <input 
+            type="number" 
+            name="age" 
+            placeholder="Age" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            min="18"
+            max="120"
+            title="Enter your age (minimum 18 years)"
+            aria-label="Age" 
+          />
 
           {/* Gender Dropdown */}
           <select name="gender" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required
@@ -167,10 +251,28 @@ const Signup = () => {
             )) : null}
           </select>
 
-          <input type="password" name="password" placeholder="Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Password" title="Enter your password" />
-          <input type="password" name="confirmPassword" placeholder="Confirm Password" className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" onChange={handleChange} required 
-            aria-label="Confirm Password" title="Re-enter your password" />
+          <input 
+            type="password" 
+            name="password" 
+            placeholder="Password" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            minLength="6"
+            title="Password must be at least 6 characters with 1 uppercase, 1 number, and 1 special character"
+            aria-label="Password" 
+          />
+          <input 
+            type="password" 
+            name="confirmPassword" 
+            placeholder="Confirm Password" 
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+            onChange={handleChange} 
+            required 
+            minLength="6"
+            title="Re-enter your password to confirm"
+            aria-label="Confirm Password" 
+          />
           
           <button type="submit" className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200"
             aria-label="Sign Up Button" title="Click to sign up">Sign Up</button>
