@@ -8,9 +8,8 @@ const API_URL = import.meta.env?.VITE_API_URL || "https://deshkavote-backend.onr
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1); // 1: Enter mobile, 2: Enter OTP, 3: New password
+  const [step, setStep] = useState(1); // 1: Enter email, 2: Enter OTP, 3: New password
   const [formData, setFormData] = useState({
-    mobile: "",
     email: "",
     otp: "",
     newPassword: "",
@@ -27,20 +26,18 @@ const ForgotPassword = () => {
   // Step 1: Send OTP to mobile number
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    // Require either email or mobile
-    if ((!formData.mobile || !/^\d{10}$/.test(formData.mobile)) && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))) {
-      toast.error("Please enter a valid 10-digit mobile number or a valid email address");
+    // Require email only
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     try {
-      // Prefer mobile when provided (most users register with mobile). Fallback to email.
-      const mobileVal = formData.mobile?.trim();
-      const emailVal = formData.email?.trim();
-      const payload = (mobileVal && /^\d{10}$/.test(mobileVal)) ? { mobile: mobileVal } : { email: emailVal };
-      console.log("Sending forgot-password payload:", JSON.stringify(payload));
-      const response = await axios.post(`${API_URL}/api/user/forgot-password`, payload);
+  const emailVal = formData.email?.trim().toLowerCase();
+  const payload = { email: emailVal };
+  console.log("Sending forgot-password payload:", JSON.stringify(payload));
+  const response = await axios.post(`${API_URL}/api/user/forgot-password`, payload);
       
       if (response.data.success) {
         toast.success(response.data.message || "OTP sent successfully");
@@ -66,9 +63,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-  const mobileVal = formData.mobile?.trim();
-  const emailVal = formData.email?.trim();
-  const payload = (mobileVal && /^\d{10}$/.test(mobileVal)) ? { mobile: mobileVal, otp: formData.otp.trim() } : { email: emailVal, otp: formData.otp.trim() };
+  const payload = { email: formData.email?.trim().toLowerCase(), otp: formData.otp.trim() };
   console.log("Verifying OTP with payload:", JSON.stringify(payload));
   const response = await axios.post(`${API_URL}/api/user/verify-otp`, payload);
       
@@ -107,11 +102,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const mobileVal = formData.mobile?.trim();
-      const emailVal = formData.email?.trim();
-      const payload = (mobileVal && /^\d{10}$/.test(mobileVal))
-        ? { mobile: mobileVal, otp: formData.otp.trim(), newPassword: formData.newPassword }
-        : { email: emailVal, otp: formData.otp.trim(), newPassword: formData.newPassword };
+      const payload = { email: formData.email?.trim().toLowerCase(), otp: formData.otp.trim(), newPassword: formData.newPassword };
       console.log("Resetting password with payload:", JSON.stringify(payload));
       const response = await axios.post(`${API_URL}/api/user/reset-password`, payload);
       
@@ -140,27 +131,15 @@ const ForgotPassword = () => {
         {/* Step 1: Enter Mobile Number */}
         {step === 1 && (
           <form onSubmit={handleSendOTP} className="space-y-4">
-            <p className="text-gray-300 text-center">Enter your registered mobile number or email to receive OTP</p>
-            <input 
-              type="text" 
-              name="mobile" 
-              placeholder="Mobile Number (10 digits)" 
-              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500 mb-2" 
-              onChange={handleChange} 
-              pattern="\d{10}"
-              maxLength="10"
-              title="Enter your 10-digit mobile number"
-              disabled={loading}
-            />
-            <div className="text-center text-gray-400 mb-2">OR</div>
-            <input 
-              type="email" 
-              name="email" 
-              placeholder="Email Address" 
-              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
-              onChange={handleChange} 
-              disabled={loading}
-            />
+                <p className="text-gray-300 text-center">Enter your registered email to receive an OTP</p>
+                <input 
+                  type="email" 
+                  name="email" 
+                  placeholder="Email Address" 
+                  className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+                  onChange={handleChange} 
+                  disabled={loading}
+                />
             <button 
               type="submit" 
               className="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition duration-200 disabled:opacity-50"
@@ -180,7 +159,7 @@ const ForgotPassword = () => {
         {step === 2 && (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <p className="text-gray-300 text-center">
-              Enter the 6-digit OTP sent to {formData.mobile}
+              Enter the 6-digit OTP sent to {formData.email}
             </p>
             <input 
               type="text" 
@@ -202,12 +181,12 @@ const ForgotPassword = () => {
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
             <div className="text-center">
-              <button 
+                <button 
                 type="button" 
                 onClick={() => setStep(1)}
                 className="text-blue-400 hover:underline"
               >
-                Change Mobile Number
+                Change Email
               </button>
             </div>
           </form>
