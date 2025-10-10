@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postinstall": "npx update-browserslist-db@latest --quiet || true",
     "lint": "eslint .",
     "preview": "vite preview"
   },

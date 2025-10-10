@@ -11,6 +11,7 @@ const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: Enter mobile, 2: Enter OTP, 3: New password
   const [formData, setFormData] = useState({
     mobile: "",
+    email: "",
     otp: "",
     newPassword: "",
     confirmPassword: ""
@@ -26,20 +27,23 @@ const ForgotPassword = () => {
   // Step 1: Send OTP to mobile number
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    
-    if (!formData.mobile || formData.mobile.length !== 10 || !/^\d{10}$/.test(formData.mobile)) {
-      toast.error("Please enter a valid 10-digit mobile number");
+    // Require either email or mobile
+    if ((!formData.mobile || !/^\d{10}$/.test(formData.mobile)) && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))) {
+      toast.error("Please enter a valid 10-digit mobile number or a valid email address");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/user/forgot-password`, {
-        mobile: formData.mobile
-      });
+      // Prefer mobile when provided (most users register with mobile). Fallback to email.
+      const mobileVal = formData.mobile?.trim();
+      const emailVal = formData.email?.trim();
+      const payload = (mobileVal && /^\d{10}$/.test(mobileVal)) ? { mobile: mobileVal } : { email: emailVal };
+      console.log("Sending forgot-password payload:", JSON.stringify(payload));
+      const response = await axios.post(`${API_URL}/api/user/forgot-password`, payload);
       
       if (response.data.success) {
-        toast.success("OTP sent successfully to your mobile number");
+        toast.success(response.data.message || "OTP sent successfully");
         setOtpSent(true);
         setStep(2);
       }
@@ -62,10 +66,11 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/user/verify-otp`, {
-        mobile: formData.mobile,
-        otp: formData.otp
-      });
+  const mobileVal = formData.mobile?.trim();
+  const emailVal = formData.email?.trim();
+  const payload = (mobileVal && /^\d{10}$/.test(mobileVal)) ? { mobile: mobileVal, otp: formData.otp.trim() } : { email: emailVal, otp: formData.otp.trim() };
+  console.log("Verifying OTP with payload:", JSON.stringify(payload));
+  const response = await axios.post(`${API_URL}/api/user/verify-otp`, payload);
       
       if (response.data.success) {
         toast.success("OTP verified successfully");
@@ -102,11 +107,13 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/user/reset-password`, {
-        mobile: formData.mobile,
-        otp: formData.otp,
-        newPassword: formData.newPassword
-      });
+      const mobileVal = formData.mobile?.trim();
+      const emailVal = formData.email?.trim();
+      const payload = (mobileVal && /^\d{10}$/.test(mobileVal))
+        ? { mobile: mobileVal, otp: formData.otp.trim(), newPassword: formData.newPassword }
+        : { email: emailVal, otp: formData.otp.trim(), newPassword: formData.newPassword };
+      console.log("Resetting password with payload:", JSON.stringify(payload));
+      const response = await axios.post(`${API_URL}/api/user/reset-password`, payload);
       
       if (response.data.success) {
         toast.success("Password reset successfully! You can now login with your new password");
@@ -133,17 +140,25 @@ const ForgotPassword = () => {
         {/* Step 1: Enter Mobile Number */}
         {step === 1 && (
           <form onSubmit={handleSendOTP} className="space-y-4">
-            <p className="text-gray-300 text-center">Enter your registered mobile number to receive OTP</p>
+            <p className="text-gray-300 text-center">Enter your registered mobile number or email to receive OTP</p>
             <input 
               type="text" 
               name="mobile" 
-              placeholder="Mobile Number" 
-              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+              placeholder="Mobile Number (10 digits)" 
+              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500 mb-2" 
               onChange={handleChange} 
-              required 
               pattern="\d{10}"
               maxLength="10"
               title="Enter your 10-digit mobile number"
+              disabled={loading}
+            />
+            <div className="text-center text-gray-400 mb-2">OR</div>
+            <input 
+              type="email" 
+              name="email" 
+              placeholder="Email Address" 
+              className="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-blue-500" 
+              onChange={handleChange} 
               disabled={loading}
             />
             <button 
